@@ -190,6 +190,7 @@ function sendCurrentMessage() {
   state.sendChat(message).catch(() => addSystemMessage("送信できませんでした"));
   draftInput.value = "";
   clearCanvas();
+  scrollToConversationBottom();
 }
 
 function appendMessage(message) {
@@ -260,7 +261,17 @@ function renderMessages() {
   }
 
   messages.append(fragment);
-  messages.scrollTop = messages.scrollHeight;
+  scrollToConversationBottom();
+}
+
+function scrollToConversationBottom() {
+  requestAnimationFrame(() => {
+    messages.scrollTop = messages.scrollHeight;
+    window.scrollTo({
+      top: document.documentElement.scrollHeight,
+      behavior: "auto"
+    });
+  });
 }
 
 function setupKeyboard() {
