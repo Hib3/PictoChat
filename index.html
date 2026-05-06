@@ -3,73 +3,108 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#f6f1de">
-    <title>PictoChat PWA</title>
+    <meta name="theme-color" content="#bfbfbf">
+    <title>PictoChat Online</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="icon" href="./icon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="./styles.css">
     <script type="module" src="./app.js"></script>
   </head>
   <body>
-    <div class="app-shell">
+    <div class="ds-shell">
       <section id="loginView" class="login-view" aria-labelledby="loginTitle">
-        <div class="login-panel picto-frame">
-          <p class="brand">PICTOCHAT</p>
-          <h1 id="loginTitle">名前を入れて開始</h1>
-          <form id="loginForm" class="login-form" autocomplete="off">
-            <label for="nameInput">ユーザー名</label>
-            <input id="nameInput" name="name" type="text" inputmode="text" maxlength="16" required autofocus>
-            <button type="submit">入室</button>
-          </form>
-        </div>
+        <form id="loginForm" class="login-box" autocomplete="off">
+          <h1 id="loginTitle">
+            <span>Connect to</span>
+            <strong>PICT☻CHAT<br>ONLINE</strong>
+          </h1>
+          <label for="nameInput">Username:</label>
+          <input id="nameInput" name="name" type="text" inputmode="text" maxlength="16" required>
+          <label>Color:</label>
+          <button id="colorButton" class="color-swatch" type="button" aria-label="色をランダム変更"></button>
+          <button class="connect-button" type="submit">CONNECT</button>
+        </form>
       </section>
 
+      <main id="roomView" class="room-view is-hidden" aria-label="ルーム選択">
+        <aside class="room-rail">
+          <div class="rail-dot rail-dot-top"></div>
+          <div class="rail-dot rail-dot-middle"></div>
+        </aside>
+        <section class="room-stage">
+          <div class="stripe-space"></div>
+          <header class="picto-title">PICT☻CHAT</header>
+          <p class="join-copy">Choose a Chat Room to join.</p>
+          <section class="room-list" aria-label="チャットルーム">
+            <button class="room-card" type="button" data-room="0">
+              <span class="room-letter">A</span>
+              <span class="room-name">Chat Room A</span>
+              <span class="room-count"><span class="person-icon"></span><strong data-count="0">0</strong>/16</span>
+            </button>
+            <button class="room-card" type="button" data-room="1">
+              <span class="room-letter">B</span>
+              <span class="room-name">Chat Room B</span>
+              <span class="room-count"><span class="person-icon"></span><strong data-count="1">0</strong>/16</span>
+            </button>
+            <button class="room-card" type="button" data-room="2">
+              <span class="room-letter">C</span>
+              <span class="room-name">Chat Room C</span>
+              <span class="room-count"><span class="person-icon"></span><strong data-count="2">0</strong>/16</span>
+            </button>
+            <button class="room-card" type="button" data-room="3">
+              <span class="room-letter">D</span>
+              <span class="room-name">Chat Room D</span>
+              <span class="room-count"><span class="person-icon"></span><strong data-count="3">0</strong>/16</span>
+            </button>
+          </section>
+          <div class="bottom-lime"></div>
+        </section>
+      </main>
+
       <main id="chatView" class="chat-view is-hidden" aria-label="チャット">
-        <aside class="side-rail" aria-label="ツール">
+        <aside class="tool-rail" aria-label="ツール">
           <div class="signal-icon">▥</div>
-          <div class="rail-separator"></div>
-          <nav class="channels" aria-label="チャンネル">
-            <button class="channel-tab is-active" type="button" data-channel="0">A</button>
-            <button class="channel-tab" type="button" data-channel="1">B</button>
-            <button class="channel-tab" type="button" data-channel="2">C</button>
-            <button class="channel-tab" type="button" data-channel="3">D</button>
-          </nav>
-          <div class="rail-separator"></div>
+          <div class="rail-dots"></div>
+          <button id="roomBackButton" class="channel-badge" type="button" aria-label="ルーム選択へ">A</button>
+          <button class="rail-arrow" type="button" aria-label="上">▲</button>
+          <button class="rail-menu" type="button" aria-label="メニュー">≡</button>
+          <button class="rail-arrow" type="button" aria-label="下">▼</button>
+          <div class="rail-dots"></div>
           <button id="penButton" class="rail-tool is-active" type="button" aria-label="ペン">╱</button>
           <button id="eraseButton" class="rail-tool" type="button" aria-label="消しゴム">▱</button>
-          <button id="clearButton" class="rail-tool" type="button" aria-label="全消し">□</button>
+          <button id="clearButton" class="rail-tool" type="button" aria-label="全消し">■</button>
+          <button class="rail-tool small-dot" type="button" aria-label="細線">▪</button>
+          <div class="rail-dots"></div>
+          <button class="rail-icon" type="button" aria-label="文字">A1</button>
+          <button class="rail-icon" type="button" aria-label="人">♙</button>
+          <button class="rail-icon" type="button" aria-label="かな">あ</button>
+          <button class="rail-icon" type="button" aria-label="記号">@</button>
+          <button class="rail-icon" type="button" aria-label="顔">☻</button>
         </aside>
 
-        <section class="picto-stage">
-          <header class="stripe-top">
-            <button id="leaveButton" class="close-button" type="button" aria-label="退室">×</button>
-          </header>
-
-          <section class="title-plate" aria-label="タイトル">
-            <span>PICT☻CHAT</span>
-            <strong id="roomTitle">Room A</strong>
-          </section>
-
-          <section class="entry-bar">
-            <span id="roomStatus">Now entering A</span>
-          </section>
-
-          <section class="input-strip">
-            <span id="selfName" class="name-plate">Player</span>
-            <input id="textInput" type="text" maxlength="80" placeholder="hello world :)">
-          </section>
-
+        <section class="chat-stage">
+          <div class="stripe-space"></div>
+          <header class="picto-title">PICT☻CHAT</header>
           <section id="messages" class="messages" aria-live="polite"></section>
-
           <section class="composer" aria-label="送信欄">
-            <canvas id="drawCanvas" class="draw-canvas" width="640" height="300" aria-label="手書き入力"></canvas>
+            <button id="closeComposer" class="mini-close" type="button" aria-label="閉じる">×</button>
+            <div class="draw-card">
+              <div class="draft-strip">
+                <span id="draftName" class="draft-name">user</span>
+                <input id="draftInput" class="draft-input" type="text" maxlength="80" aria-label="本文">
+              </div>
+              <canvas id="drawCanvas" class="draw-canvas" width="640" height="300" aria-label="手書き入力"></canvas>
+            </div>
             <div class="keyboard-panel">
               <div id="keyboard" class="keyboard" aria-label="画面キーボード"></div>
               <div class="send-stack">
-                <button class="arrow-button" type="button" aria-label="上">▲</button>
+                <button class="send-side" type="button" aria-label="上">▲</button>
                 <button id="sendButton" class="send-button" type="button">SEND</button>
-                <button class="arrow-button" type="button" aria-label="下">▼</button>
-                <button id="backspaceButton" class="arrow-button" type="button" aria-label="削除">←</button>
+                <button class="send-side" type="button" aria-label="下">▼</button>
+                <button id="backspaceButton" class="send-side" type="button" aria-label="削除">←</button>
               </div>
             </div>
           </section>
