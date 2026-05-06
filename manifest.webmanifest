@@ -1,11 +1,11 @@
 {
-  "name": "Picto PWA Chat",
+  "name": "PictoChat Online",
   "short_name": "PictoChat",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f6f1de",
-  "theme_color": "#f6f1de",
+  "background_color": "#bfbfbf",
+  "theme_color": "#bfbfbf",
   "icons": [
     {
       "src": "./icon.svg",
