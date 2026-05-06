@@ -1,0 +1,17 @@
+{
+  "name": "Picto PWA Chat",
+  "short_name": "PictoChat",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f1de",
+  "theme_color": "#f6f1de",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
