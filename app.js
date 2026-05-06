@@ -49,6 +49,7 @@ const draftInput = $("#draftInput");
 
 nameInput.value = state.name;
 colorButton.style.background = state.color;
+applyAccentColor(state.color);
 setupCanvas();
 setupKeyboard();
 registerServiceWorker();
@@ -67,6 +68,7 @@ loginForm.addEventListener("submit", (event) => {
 colorButton.addEventListener("click", () => {
   state.color = randomColor();
   colorButton.style.background = state.color;
+  applyAccentColor(state.color);
   sendLobbyStatus();
 });
 
@@ -383,6 +385,20 @@ function isCanvasBlank() {
 function randomColor() {
   const colors = ["#99ff00", "#9ad9ff", "#ffadc4", "#ffd374"];
   return colors[Math.floor(Math.random() * colors.length)];
+}
+
+function applyAccentColor(color) {
+  document.documentElement.style.setProperty("--accent", color);
+  document.documentElement.style.setProperty("--accent-soft", mixWithWhite(color, 0.82));
+}
+
+function mixWithWhite(hex, amount) {
+  const value = hex.replace("#", "");
+  const red = parseInt(value.slice(0, 2), 16);
+  const green = parseInt(value.slice(2, 4), 16);
+  const blue = parseInt(value.slice(4, 6), 16);
+  const mix = (channel) => Math.round(channel * (1 - amount) + 255 * amount);
+  return `rgb(${mix(red)}, ${mix(green)}, ${mix(blue)})`;
 }
 
 function makeId() {
