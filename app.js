@@ -1,8 +1,7 @@
 import { joinRoom } from "https://esm.sh/trystero@0.21.8/torrent?bundle";
 
-const CHANNELS = ["Room A", "Room B", "Room C", "Room D"];
-const CHANNEL_KEYS = ["A", "B", "C", "D"];
-const APP_ID = `inner-picto-pwa-${location.host}${location.pathname}`.replace(/[^a-z0-9_-]/gi, "-");
+const ROOMS = ["A", "B", "C", "D"];
+const APP_ID = `pictochat-online-${location.host}${location.pathname}`.replace(/[^a-z0-9_-]/gi, "-");
 const rtcConfig = {
   appId: APP_ID,
   password: APP_ID,
@@ -12,12 +11,14 @@ const rtcConfig = {
 };
 
 const state = {
-  name: "",
-  color: randomColor(),
-  channel: 0,
+  id: makeId(),
+  name: `user${Math.floor(100000 + Math.random() * 900000)}`,
+  color: "#99ff00",
+  selectedRoom: null,
+  lobby: null,
+  sendLobby: null,
   room: null,
   sendChat: null,
-  sendPresence: null,
   peers: new Map(),
   messages: [[], [], [], []],
   drawing: false,
@@ -26,24 +27,28 @@ const state = {
 
 const $ = (selector) => document.querySelector(selector);
 const loginView = $("#loginView");
+const roomView = $("#roomView");
 const chatView = $("#chatView");
 const loginForm = $("#loginForm");
 const nameInput = $("#nameInput");
-const roomStatus = $("#roomStatus");
-const roomTitle = $("#roomTitle");
+const colorButton = $("#colorButton");
+const roomCards = [...document.querySelectorAll(".room-card")];
+const countLabels = [...document.querySelectorAll("[data-count]")];
 const messages = $("#messages");
-const tabs = [...document.querySelectorAll(".channel-tab")];
+const roomBackButton = $("#roomBackButton");
 const canvas = $("#drawCanvas");
 const ctx = canvas.getContext("2d", { willReadFrequently: true });
-const textInput = $("#textInput");
 const sendButton = $("#sendButton");
 const penButton = $("#penButton");
 const eraseButton = $("#eraseButton");
 const clearButton = $("#clearButton");
-const selfName = $("#selfName");
 const keyboard = $("#keyboard");
 const backspaceButton = $("#backspaceButton");
+const draftName = $("#draftName");
+const draftInput = $("#draftInput");
 
+nameInput.value = state.name;
+colorButton.style.background = state.color;
 setupCanvas();
 setupKeyboard();
 registerServiceWorker();
@@ -53,24 +58,27 @@ loginForm.addEventListener("submit", (event) => {
   const name = nameInput.value.trim().slice(0, 16);
   if (!name) return;
   state.name = name;
-  selfName.textContent = name;
+  draftName.textContent = name;
   loginView.classList.add("is-hidden");
-  chatView.classList.remove("is-hidden");
-  joinChannel(0);
+  roomView.classList.remove("is-hidden");
+  joinLobby();
 });
 
-tabs.forEach((tab) => {
-  tab.addEventListener("click", () => joinChannel(Number(tab.dataset.channel)));
+colorButton.addEventListener("click", () => {
+  state.color = randomColor();
+  colorButton.style.background = state.color;
+  sendLobbyStatus();
 });
 
-$("#leaveButton").addEventListener("click", () => {
-  leaveRoom();
-  state.messages = [[], [], [], []];
-  state.peers.clear();
+roomCards.forEach((card) => {
+  card.addEventListener("click", () => joinChatRoom(Number(card.dataset.room)));
+});
+
+roomBackButton.addEventListener("click", () => {
+  leaveChatRoom();
   chatView.classList.add("is-hidden");
-  loginView.classList.remove("is-hidden");
-  roomStatus.textContent = "未接続";
-  renderMessages();
+  roomView.classList.remove("is-hidden");
+  sendLobbyStatus();
 });
 
 penButton.addEventListener("click", () => setTool(false));
@@ -78,77 +86,92 @@ eraseButton.addEventListener("click", () => setTool(true));
 clearButton.addEventListener("click", clearCanvas);
 sendButton.addEventListener("click", sendCurrentMessage);
 backspaceButton.addEventListener("click", () => editText("backspace"));
-textInput.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") sendCurrentMessage();
-});
 
-function joinChannel(channel) {
-  if (state.channel === channel && state.room) return;
-  leaveRoom();
-  state.channel = channel;
-  roomTitle.textContent = CHANNELS[channel];
-  tabs.forEach((tab, index) => tab.classList.toggle("is-active", index === channel));
+function joinLobby() {
+  if (state.lobby) return;
+  const lobby = joinRoom(rtcConfig, "lobby", (error) => {
+    addSystemMessage(`接続エラー: ${error?.message || "不明"}`);
+  });
+  const [sendLobby, getLobby] = lobby.makeAction("presence");
+  state.lobby = lobby;
+  state.sendLobby = sendLobby;
+
+  lobby.onPeerJoin((peerId) => {
+    sendLobbyStatus(peerId);
+  });
+
+  lobby.onPeerLeave((peerId) => {
+    state.peers.delete(peerId);
+    renderCounts();
+  });
+
+  getLobby((data, peerId) => {
+    if (!data?.id) return;
+    state.peers.set(peerId, data);
+    renderCounts();
+    sendLobbyStatus(peerId);
+  });
+
+  sendLobbyStatus();
+  renderCounts();
+}
+
+function sendLobbyStatus(peerId) {
+  if (!state.sendLobby) return;
+  const payload = {
+    id: state.id,
+    name: state.name,
+    color: state.color,
+    room: state.selectedRoom
+  };
+  state.sendLobby(payload, peerId).catch(() => {});
+}
+
+function renderCounts() {
+  const counts = [0, 0, 0, 0];
+  if (state.selectedRoom !== null) counts[state.selectedRoom] += 1;
+  for (const peer of state.peers.values()) {
+    if (Number.isInteger(peer.room) && peer.room >= 0 && peer.room < 4) counts[peer.room] += 1;
+  }
+  countLabels.forEach((label, index) => {
+    label.textContent = counts[index];
+  });
+}
+
+function joinChatRoom(roomIndex) {
+  leaveChatRoom();
+  state.selectedRoom = roomIndex;
+  roomBackButton.textContent = ROOMS[roomIndex];
+  roomView.classList.add("is-hidden");
+  chatView.classList.remove("is-hidden");
   renderMessages();
-  addSystemMessage(`Now entering ${CHANNEL_KEYS[channel]}: ${state.name}`);
+  addSystemMessage(`Now entering ${ROOMS[roomIndex]}: ${state.name}`);
+  sendLobbyStatus();
+  renderCounts();
 
-  const roomId = `room-${channel + 1}`;
-  const room = joinRoom(rtcConfig, roomId, (error) => {
+  const room = joinRoom(rtcConfig, `room-${ROOMS[roomIndex]}`, (error) => {
     addSystemMessage(`接続エラー: ${error?.message || "不明"}`);
   });
   const [sendChat, getChat] = room.makeAction("chat");
-  const [sendPresence, getPresence] = room.makeAction("presence");
-
   state.room = room;
   state.sendChat = sendChat;
-  state.sendPresence = sendPresence;
-  state.peers.clear();
-  updateStatus();
 
-  room.onPeerJoin((peerId) => {
-    sendPresence(profile(), peerId);
-    updateStatus();
-  });
-
-  room.onPeerLeave((peerId) => {
-    const peer = state.peers.get(peerId);
-    state.peers.delete(peerId);
-    if (peer?.name) addSystemMessage(`${peer.name} が退室しました`);
-    updateStatus();
-  });
-
-  getPresence((data, peerId) => {
-    if (!data?.name) return;
-    const known = state.peers.has(peerId);
-    state.peers.set(peerId, data);
-    if (!known) addSystemMessage(`${data.name} が入室しました`);
-    if (!known) sendPresence(profile(), peerId);
-    updateStatus();
-  });
-
-  getChat((data, peerId) => {
+  getChat((data) => {
     if (!data?.id) return;
-    appendMessage({
-      id: data.id,
-      name: data.name || state.peers.get(peerId)?.name || "unknown",
-      color: data.color || state.peers.get(peerId)?.color || "#3b7dde",
-      text: data.text || "",
-      image: data.image || "",
-      time: data.time || Date.now(),
-      own: false
-    });
+    appendMessage({ ...data, own: false });
   });
 }
 
-function leaveRoom() {
+function leaveChatRoom() {
   if (state.room) state.room.leave();
   state.room = null;
   state.sendChat = null;
-  state.sendPresence = null;
+  state.selectedRoom = null;
 }
 
 function sendCurrentMessage() {
-  if (!state.sendChat) return;
-  const text = textInput.value.trim();
+  if (!state.sendChat || state.selectedRoom === null) return;
+  const text = draftInput.value.trim();
   const hasDrawing = !isCanvasBlank();
   if (!text && !hasDrawing) return;
 
@@ -163,19 +186,20 @@ function sendCurrentMessage() {
 
   appendMessage({ ...message, own: true });
   state.sendChat(message).catch(() => addSystemMessage("送信できませんでした"));
-  textInput.value = "";
+  draftInput.value = "";
   clearCanvas();
 }
 
 function appendMessage(message) {
-  const list = state.messages[state.channel];
-  if (list.some((item) => item.id === message.id)) return;
+  const list = state.messages[state.selectedRoom];
+  if (!list || list.some((item) => item.id === message.id)) return;
   list.push(message);
-  while (list.length > 60) list.shift();
+  while (list.length > 50) list.shift();
   renderMessages();
 }
 
 function addSystemMessage(text) {
+  if (state.selectedRoom === null) return;
   appendMessage({
     id: `system-${Date.now()}-${Math.random()}`,
     system: true,
@@ -186,9 +210,10 @@ function addSystemMessage(text) {
 
 function renderMessages() {
   messages.textContent = "";
+  if (state.selectedRoom === null) return;
   const fragment = document.createDocumentFragment();
 
-  for (const message of state.messages[state.channel]) {
+  for (const message of state.messages[state.selectedRoom]) {
     if (message.system) {
       const item = document.createElement("div");
       item.className = "system-message";
@@ -199,13 +224,13 @@ function renderMessages() {
 
     const item = document.createElement("article");
     item.className = "message";
-    item.style.setProperty("--message-color", message.color);
+    item.style.setProperty("--user-color", message.color || state.color);
     const head = document.createElement("header");
     head.className = "message-head";
 
     const name = document.createElement("span");
     name.className = "message-name";
-    name.textContent = message.own ? `${message.name}（自分）` : message.name;
+    name.textContent = message.name || "user";
 
     const time = document.createElement("span");
     time.className = "message-time";
@@ -236,15 +261,6 @@ function renderMessages() {
   messages.scrollTop = messages.scrollHeight;
 }
 
-function profile() {
-  return { name: state.name, color: state.color };
-}
-
-function updateStatus() {
-  const count = state.peers.size + (state.room ? 1 : 0);
-  roomStatus.textContent = `${CHANNEL_KEYS[state.channel]}: ${state.name} / ${count} user${count === 1 ? "" : "s"}`;
-}
-
 function setupKeyboard() {
   const rows = [
     ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "="],
@@ -263,7 +279,10 @@ function setupKeyboard() {
       key.type = "button";
       key.className = label.length > 1 ? "key key-wide" : "key";
       key.textContent = label;
-      key.addEventListener("click", () => editText(label));
+      key.addEventListener("click", () => {
+        if (label === "ENTER") sendCurrentMessage();
+        else editText(label);
+      });
       rowElement.append(key);
     });
     fragment.append(rowElement);
@@ -272,38 +291,33 @@ function setupKeyboard() {
 }
 
 function editText(value) {
-  const start = textInput.selectionStart ?? textInput.value.length;
-  const end = textInput.selectionEnd ?? textInput.value.length;
-  const current = textInput.value;
-
-  if (value === "ENTER") {
-    sendCurrentMessage();
-    return;
-  }
+  const start = draftInput.selectionStart ?? draftInput.value.length;
+  const end = draftInput.selectionEnd ?? draftInput.value.length;
+  const current = draftInput.value;
 
   if (value === "←" || value === "backspace") {
     if (start !== end) {
-      textInput.value = current.slice(0, start) + current.slice(end);
-      textInput.setSelectionRange(start, start);
+      draftInput.value = current.slice(0, start) + current.slice(end);
+      draftInput.setSelectionRange(start, start);
     } else if (start > 0) {
-      textInput.value = current.slice(0, start - 1) + current.slice(start);
-      textInput.setSelectionRange(start - 1, start - 1);
+      draftInput.value = current.slice(0, start - 1) + current.slice(start);
+      draftInput.setSelectionRange(start - 1, start - 1);
     }
-    textInput.focus();
+    draftInput.focus();
     return;
   }
 
   const insert = value === "SPACE" ? " " : value === "CAPS" || value === "SHIFT" ? "" : value;
   if (!insert) {
-    textInput.focus();
+    draftInput.focus();
     return;
   }
 
-  const next = (current.slice(0, start) + insert + current.slice(end)).slice(0, textInput.maxLength);
+  const next = (current.slice(0, start) + insert + current.slice(end)).slice(0, draftInput.maxLength);
   const nextPosition = Math.min(start + insert.length, next.length);
-  textInput.value = next;
-  textInput.focus();
-  textInput.setSelectionRange(nextPosition, nextPosition);
+  draftInput.value = next;
+  draftInput.focus();
+  draftInput.setSelectionRange(nextPosition, nextPosition);
 }
 
 function setTool(erasing) {
@@ -330,7 +344,7 @@ function setupCanvas() {
     const point = getPoint(event);
     ctx.globalCompositeOperation = state.erasing ? "destination-out" : "source-over";
     ctx.strokeStyle = "#111";
-    ctx.lineWidth = state.erasing ? 28 : 5;
+    ctx.lineWidth = state.erasing ? 24 : 5;
     ctx.lineTo(point.x, point.y);
     ctx.stroke();
   });
@@ -367,7 +381,7 @@ function isCanvasBlank() {
 }
 
 function randomColor() {
-  const colors = ["#2a78d2", "#d24b8c", "#d48420", "#189e55", "#8a55cc", "#c83838"];
+  const colors = ["#99ff00", "#9ad9ff", "#ffadc4", "#ffd374"];
   return colors[Math.floor(Math.random() * colors.length)];
 }
 
