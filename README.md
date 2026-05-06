@@ -12,14 +12,20 @@ Small static PWA inspired by PictoChat-style group chat for private, non-commerc
 - No backend server
 - No offline message storage
 
-## Hosting On GitHub Pages
+## GitHub Pages
 
-Publish these files from the repository root with GitHub Pages.
+This repository is ready to publish from GitHub Pages as a static site.
 
-1. Create a public GitHub repository.
-2. Upload all files in this folder.
-3. Open repository Settings.
-4. Enable Pages from the default branch and `/root`.
+Recommended settings:
+
+1. Open `Settings` > `Pages`.
+2. Set `Source` to `Deploy from a branch`.
+3. Set `Branch` to `main` and folder to `/root`.
+4. Save.
+
+After GitHub finishes publishing, the app URL should be:
+
+https://hib3.github.io/PictoChat/
 
 The app is static. WebRTC peer discovery uses Trystero's torrent strategy, so initial connection still needs internet access.
 
