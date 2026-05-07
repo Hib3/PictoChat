@@ -1,7 +1,8 @@
-const CACHE_NAME = "picto-pwa-chat-v13";
+const CACHE_NAME = "picto-pwa-chat-v14";
 const ASSETS = [
   "./",
   "./index.html",
+  "./main.js",
   "./p2p-bridge.js",
   "./manifest.webmanifest",
   "https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/icon.png",

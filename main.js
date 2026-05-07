@@ -291,7 +291,15 @@ loaderFunc = (loader, resources) => {
         };
     }
     window.onkeydown = function (e) {
-        if (e.target !== topyElem) keyDownEv(e);
+        if (e.target === topyElem) {
+            const key = e.key.replace("Backspace", "BACKSPACE").replace("Enter", "ENTER");
+            if (key.length === 1 || key === "BACKSPACE" || key === "ENTER") {
+                e.preventDefault();
+                keyDownEv(e);
+            }
+            return;
+        }
+        keyDownEv(e);
     };
     window.onkeyup = function (e) {
         if (e.target !== topyElem) keyUpEv(e);
