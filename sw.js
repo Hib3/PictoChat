@@ -1,11 +1,11 @@
-const CACHE_NAME = "picto-pwa-chat-v5";
+const CACHE_NAME = "picto-pwa-chat-v7";
 const ASSETS = [
   "./",
   "./index.html",
   "./p2p-bridge.js",
   "./manifest.webmanifest",
   "https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/icon.png",
-  "https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/pixi.min.js",
+  "https://cdn.jsdelivr.net/npm/pixi.js-legacy@5.3.0/dist/pixi-legacy.min.js",
   "https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/howler.min.js",
   "https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/fontfaceobserver.js",
   "https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/pickr.min.js",
