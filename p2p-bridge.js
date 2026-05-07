@@ -86,11 +86,13 @@ class PictoP2PWebSocket {
         this.sendPresence = null;
         this.sendChat = null;
         this.presenceInterval = null;
+        this.syncStatusTimer = null;
         this.peerTtlMs = 30000;
         this.rooms = ["room_a", "room_b", "room_c", "room_d"];
         this.appId = `pictochat-pages-${location.host}${location.pathname}`.replace(/[^a-z0-9_-]/gi, "-");
         window.__pictoP2P = this;
         window.__pictoP2PEvents = window.__pictoP2PEvents || [];
+        this.setSyncStatus("CONNECTING P2P");
         this.init();
     }
 
@@ -113,6 +115,7 @@ class PictoP2PWebSocket {
             getPresence((presence, peerId) => this.handlePresence(presence, peerId));
             this.startPresenceLoop();
             this.readyState = 1;
+            this.setSyncStatus("SYNCING ROOMS");
             this.onopen?.({ type: "open" });
             this.pending.splice(0).forEach((data) => this.send(data));
         } catch (error) {
@@ -167,6 +170,7 @@ class PictoP2PWebSocket {
         this.emit({ type: "sv_nameVerified", player: this.player });
         this.emit({ type: "sv_roomIds", count: this.countRooms(), ids: this.rooms });
         this.publishPresence();
+        this.syncBurst("SYNCING ROOMS");
     }
 
     enterRoom(roomId) {
@@ -176,6 +180,7 @@ class PictoP2PWebSocket {
         this.joinChatTransport(roomId);
         this.emit({ type: "sv_roomData", id: roomId });
         this.publishPresence();
+        this.syncBurst("SYNCING ROOM");
         this.emit({ type: "sv_roomIds", count: this.countRooms(), ids: this.rooms });
     }
 
@@ -224,6 +229,7 @@ class PictoP2PWebSocket {
             this.emit({ type: "sv_playerJoined", player: presence.player, id: presence.room });
         }
         this.emit({ type: "sv_roomIds", count: this.countRooms(), ids: this.rooms });
+        this.markSynced();
         this.publishPresence(peerId);
     }
 
@@ -241,16 +247,28 @@ class PictoP2PWebSocket {
         this.sendPresence({ player: this.player, room: this.roomId, at: Date.now() }, peerId).catch(() => {});
     }
 
+    syncBurst(status) {
+        this.setSyncStatus(status);
+        [0, 250, 750, 1500, 3000].forEach((delay) => {
+            setTimeout(() => {
+                this.prunePeers();
+                this.publishPresence();
+                this.emit({ type: "sv_roomIds", count: this.countRooms(), ids: this.rooms });
+                if (delay >= 1500) this.markSynced();
+            }, delay);
+        });
+    }
+
     startPresenceLoop() {
         if (this.presenceInterval) clearInterval(this.presenceInterval);
         this.presenceInterval = setInterval(() => {
             this.prunePeers();
             this.publishPresence();
             this.emit({ type: "sv_roomIds", count: this.countRooms(), ids: this.rooms });
-        }, 5000);
-        window.addEventListener("focus", () => this.publishPresence());
+        }, 2000);
+        window.addEventListener("focus", () => this.syncBurst("SYNCING ROOMS"));
         document.addEventListener("visibilitychange", () => {
-            if (!document.hidden) this.publishPresence();
+            if (!document.hidden) this.syncBurst("SYNCING ROOMS");
         });
     }
 
@@ -285,6 +303,43 @@ class PictoP2PWebSocket {
                 player: { name: "[SERVER]", color: 0xc89c00 }
             }
         };
+    }
+
+    setSyncStatus(text) {
+        let node = document.getElementById("picto_sync_status");
+        if (!node) {
+            node = document.createElement("div");
+            node.id = "picto_sync_status";
+            node.style.cssText = [
+                "position:absolute",
+                "left:8px",
+                "bottom:8px",
+                "z-index:1000001",
+                "background:#000",
+                "border:1px solid #9cff00",
+                "color:#9cff00",
+                "font-family:nds,monospace",
+                "font-size:10px",
+                "line-height:14px",
+                "padding:2px 5px",
+                "pointer-events:none",
+                "image-rendering:pixelated"
+            ].join(";");
+            document.getElementById("root")?.appendChild(node);
+        }
+        node.textContent = text;
+        node.style.display = "block";
+        if (this.syncStatusTimer) clearTimeout(this.syncStatusTimer);
+    }
+
+    markSynced() {
+        const node = document.getElementById("picto_sync_status");
+        if (!node) return;
+        node.textContent = "P2P READY";
+        if (this.syncStatusTimer) clearTimeout(this.syncStatusTimer);
+        this.syncStatusTimer = setTimeout(() => {
+            node.style.display = "none";
+        }, 1200);
     }
 
     emit(packet) {
