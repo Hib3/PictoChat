@@ -13,3 +13,4 @@
 8. Draw a line in the input canvas and confirm handwriting still works.
 9. Tap the `KEY` button at the lower right, enter Japanese text with the phone keyboard, and send it.
 10. Confirm the other windows receive the smartphone message in about one second.
+11. Open DevTools Console and confirm `[PictoChat] joinRoom`, `subscribe start`, `presence sent`, `presence received`, `message sent`, and `message received` logs appear.

@@ -128,7 +128,8 @@ loaderFunc = (loader, resources) => {
     const keys_EMOJIS = [" ", "ENTER", "BACKSPACE", "1", "☸", "☰", "☶", "➔", "2", "3", "4", "5", "6", "7", "8", "9", "0", "=", "☹", "☺", "☻", "☼", "☁", "☂", "☃", "✉", "☎", "☄", "☱", "☲", "☳", "☴", "☵", "✜", "♠", "♦", "♥", "♣", "☷", "+", "-", "✫", "✲", "◇", "□", "△", "▽", "◎", "➕", "➖", "➗", "✬", "✱", "◆", "■", "▲", "▼", "✕"];
     const jpModChars = ["がざだばぎじぢびぐずづぶげぜでべごぞどぼガザダバギジヂビヴグズヅブゲゼデベゴゾドボ".split(""), "ぱぴぷぺぽパピプペポ".split(""), "ぁゃゎぃゅぅっょぇぉァヵャヮィュゥッョェヶォ".split("")];
     let composingText = false;
-    let lastTextCommit = {text: "", at: 0};
+    let syncingTextInput = false;
+    let textInputValue = "";
 
     topyElem.onkeydown = function () {
         if (joinedRoom) sounds.key_down.play();
@@ -160,7 +161,7 @@ loaderFunc = (loader, resources) => {
     topyElem.onpaste = function (e) {
         if (!joinedRoom) return;
         e.preventDefault();
-        commitTextInput((e.clipboardData || window.clipboardData).getData("text"));
+        replaceTextInput(topyElem.value + (e.clipboardData || window.clipboardData).getData("text"));
     };
 
     window.onpaste = function (e) {
@@ -273,31 +274,27 @@ loaderFunc = (loader, resources) => {
     topyElem.onbeforeinput = function (e) {
         if (!joinedRoom) return;
         if (e.isComposing || e.inputType === "insertCompositionText") return;
-        e.preventDefault();
-        if (e.inputType === "deleteContentBackward") return addCharacterDirect("BACKSPACE");
-        if (e.inputType === "insertLineBreak") return addCharacterDirect("ENTER");
-        if (!e.data) return;
-        commitTextInput(e.data);
     };
-    topyElem.oninput = function () {
-        if (!joinedRoom || composingText || !topyElem.value) return;
-        commitTextInput(topyElem.value);
-        topyElem.value = "";
-    };
+    topyElem.oncompositionupdate = function () {};
     topyElem.oncompositionstart = function () {
         composingText = true;
     };
-    topyElem.oncompositionend = function (e) {
+    topyElem.oncompositionend = function () {
         composingText = false;
         if (!joinedRoom) return;
-        commitTextInput(e.data || topyElem.value);
-        topyElem.value = "";
+        setTimeout(() => {
+            if (!composingText) replaceTextInput(topyElem.value);
+        }, 0);
+    };
+    topyElem.oninput = function (e) {
+        if (!joinedRoom || composingText || e.isComposing) return;
+        replaceTextInput(topyElem.value);
     };
     window.onkeydown = function (e) {
         if (e.target === topyElem) {
             const key = e.key.replace("Backspace", "BACKSPACE").replace("Enter", "ENTER");
-            if (composingText || e.isComposing || key === "Process") return;
-            if (key === "BACKSPACE" || key === "ENTER") {
+            if (composingText || e.isComposing || e.keyCode === 229 || key === "Process") return;
+            if (key === "ENTER") {
                 e.preventDefault();
                 keyDownEv(e);
             }
@@ -340,6 +337,7 @@ loaderFunc = (loader, resources) => {
                 this.blendMode = PIXI.BLEND_MODES.NORMAL;
                 const f = this.roomId === "room_e" && window.location.hash && window.location.hash.length === 7;
                 let obj = {type: 'cl_joinRoom', player: playerData, id: f ? window.location.hash.slice(1) : this.roomId};
+                console.log("[PictoChat] room selected", { roomId: obj.id, username: playerData.name });
                 websocket.send(JSON.stringify(obj));
                 if (f) {
                     gotFirstMsg = 2;
@@ -695,6 +693,7 @@ loaderFunc = (loader, resources) => {
                             }
                         }
                         let obj = {type: "cl_sendMessage", message: message};
+                        console.log("[PictoChat] message send UI", { roomId: roomData.id, textboxes: message.textboxes.map((textbox) => textbox.text) });
                         websocket.send(JSON.stringify(obj));
                         let oldScrollPos = scrollPos;
                         scrollPos = pc_sprites.scrollContainer.children.length - 1;
@@ -904,14 +903,31 @@ loaderFunc = (loader, resources) => {
         return addCharacterDirect(getKey(keyIndex));
     }
 
-    function commitTextInput(text) {
-        if (!text) return;
-        const now = Date.now();
-        if (text === lastTextCommit.text && now - lastTextCommit.at < 250) return;
-        lastTextCommit = {text, at: now};
-        for (const char of Array.from(text)) {
+    function replaceTextInput(text) {
+        if (syncingTextInput || text === textInputValue) return;
+        syncingTextInput = true;
+        textInputValue = text || "";
+        clearTextboxesOnly();
+        for (const char of Array.from(textInputValue)) {
             addCharacterDirect(char === "\n" ? "ENTER" : char);
         }
+        topyElem.value = textInputValue;
+        syncingTextInput = false;
+    }
+
+    function clearTextboxesOnly() {
+        for (let i = 0; i < pc_sprites.textboxes.length; i++)
+            pc_sprites.textboxes[i].destroy();
+        pc_sprites.textboxes = [];
+        addInitialTextboxes();
+        selectedTextbox = 0;
+        redraw = true;
+    }
+
+    function syncNativeInputFromStage() {
+        if (syncingTextInput) return;
+        textInputValue = pc_sprites.textboxes.map((textbox) => textbox.text).join("");
+        topyElem.value = textInputValue;
     }
 
     function addCharacterDirect(key) {
@@ -990,6 +1006,7 @@ loaderFunc = (loader, resources) => {
                 }
             }
         }
+        syncNativeInputFromStage();
     }
 
     function clearStage() {
@@ -1004,6 +1021,8 @@ loaderFunc = (loader, resources) => {
         }
         addInitialTextboxes();
         selectedTextbox = 0;
+        textInputValue = "";
+        topyElem.value = "";
         redraw = true;
     }
 
@@ -1452,6 +1471,7 @@ loaderFunc = (loader, resources) => {
                     }
                     case "sv_roomData": {
                         roomData = obj;
+                        console.log("[PictoChat] roomId confirmed", { roomId: roomData.id });
                         joinRoom();
                         break;
                     }

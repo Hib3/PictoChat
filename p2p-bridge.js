@@ -79,56 +79,84 @@ class PictoP2PWebSocket {
         this.onclose = null;
         this.onerror = null;
         this.player = null;
+        this.userId = this.getUserId();
         this.roomId = null;
         this.peers = new Map();
         this.pending = [];
-        this.room = null;
-        this.sendPresence = null;
-        this.sendLobbyChat = null;
-        this.sendChat = null;
+        this.transports = [];
         this.presenceInterval = null;
         this.syncStatusTimer = null;
         this.peerTtlMs = 12000;
         this.seenMessageIds = new Set();
         this.rooms = ["room_a", "room_b", "room_c", "room_d"];
-        this.appId = `pictochat-pages-${location.host}${location.pathname}`.replace(/[^a-z0-9_-]/gi, "-");
+        const pathRoot = location.pathname.split("/").filter(Boolean)[0] || "root";
+        this.appId = (window.PICTO_APP_ID || `pictochat-pages-${location.host}-${pathRoot}`).replace(/[^a-z0-9_-]/gi, "-").toLowerCase();
         window.__pictoP2P = this;
         window.__pictoP2PEvents = window.__pictoP2PEvents || [];
+        this.log("app start", { appId: this.appId, userId: this.userId, url: location.href });
         this.setSyncStatus("CONNECTING P2P");
         this.init();
     }
 
     async init() {
-        try {
-            const { joinRoom } = await import("https://esm.sh/trystero@0.21.8/torrent?bundle");
-            this.joinRoom = joinRoom;
-            this.config = {
-                appId: this.appId,
-                password: this.appId,
-                trackerRedundancy: 4,
-                rtcConfig: {
-                    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-                }
-            };
-            this.lobby = joinRoom(this.config, "lobby");
-            const [sendPresence, getPresence] = this.lobby.makeAction("presence");
-            const [sendLobbyChat, getLobbyChat] = this.lobby.makeAction("roomChat");
-            this.sendPresence = sendPresence;
-            this.sendLobbyChat = sendLobbyChat;
-            this.lobby.onPeerJoin((peerId) => this.publishPresence(peerId));
-            this.lobby.onPeerLeave((peerId) => this.handlePeerLeave(peerId));
-            getPresence((presence, peerId) => this.handlePresence(presence, peerId));
-            getLobbyChat((payload) => this.handleIncomingChat(payload));
+        const strategies = [
+            { name: "nostr", url: "https://esm.sh/trystero@0.21.8?bundle" },
+            { name: "torrent", url: "https://esm.sh/trystero@0.21.8/torrent?bundle" }
+        ];
+        const results = await Promise.allSettled(strategies.map((strategy) => this.setupTransport(strategy)));
+        this.transports = results
+            .filter((result) => result.status === "fulfilled" && result.value)
+            .map((result) => result.value);
+        if (this.transports.length) {
             this.startPresenceLoop();
             this.readyState = 1;
             this.setSyncStatus("SYNCING ROOMS");
+            this.log("connect ready", { transports: this.transports.map((transport) => transport.name) });
             this.onopen?.({ type: "open" });
             this.pending.splice(0).forEach((data) => this.send(data));
-        } catch (error) {
-            this.readyState = 3;
-            this.onerror?.(error);
-            this.onclose?.({ type: "close" });
+            return;
         }
+        const error = new Error("No P2P signaling transport available.");
+        this.log("error", { message: error.message, results: results.map((result) => result.reason?.message || result.status) });
+        this.setSyncStatus("OFFLINE");
+        this.readyState = 3;
+        this.onerror?.(error);
+        this.onclose?.({ type: "close" });
+    }
+
+    async setupTransport(strategy) {
+        this.log("subscribe start", { channel: "lobby", strategy: strategy.name });
+        const { joinRoom } = await import(strategy.url);
+        const config = {
+            appId: this.appId,
+            password: this.appId,
+            trackerRedundancy: 4,
+            rtcConfig: {
+                iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+            }
+        };
+        const lobby = joinRoom(config, "lobby");
+        const [sendPresence, getPresence] = lobby.makeAction("presence");
+        const [sendLobbyChat, getLobbyChat] = lobby.makeAction("roomChat");
+        const transport = {
+            name: strategy.name,
+            joinRoom,
+            config,
+            lobby,
+            room: null,
+            sendPresence,
+            sendLobbyChat,
+            sendChat: null
+        };
+        lobby.onPeerJoin((peerId) => {
+            this.log("join success", { channel: "lobby", strategy: transport.name, peerId });
+            this.publishPresence(peerId, transport);
+        });
+        lobby.onPeerLeave((peerId) => this.handlePeerLeave(peerId, transport));
+        getPresence((presence, peerId) => this.handlePresence(presence, peerId, transport));
+        getLobbyChat((payload, peerId) => this.handleIncomingChat(payload, peerId, transport));
+        this.log("subscribe success", { channel: "lobby", strategy: transport.name });
+        return transport;
     }
 
     send(data) {
@@ -165,14 +193,19 @@ class PictoP2PWebSocket {
     close() {
         this.leaveCurrentRoom(false);
         if (this.presenceInterval) clearInterval(this.presenceInterval);
+        for (const transport of this.transports) {
+            try { transport.lobby?.leave(); } catch {}
+        }
         this.readyState = 3;
+        this.log("disconnect", { reason: "close" });
         this.onclose?.({ type: "close" });
     }
 
     verifyName(player) {
         const name = String(player.name || "user").replace(/[^\w\s]/gi, "").trim().slice(0, 10) || "user";
         const color = Number.isFinite(player.color) ? player.color : 0x99ff00;
-        this.player = { name, color };
+        this.player = { name, color, userId: this.userId };
+        this.log("username set", { userId: this.userId, username: name });
         this.emit({ type: "sv_nameVerified", player: this.player });
         this.emit({ type: "sv_roomIds", count: this.countRooms(), ids: this.rooms });
         this.publishPresence();
@@ -183,6 +216,8 @@ class PictoP2PWebSocket {
         if (!this.rooms.includes(roomId)) return;
         if (this.roomId && this.roomId !== roomId) this.leaveCurrentRoom(false);
         this.roomId = roomId;
+        this.log("joinRoom", { roomId, userId: this.userId, username: this.player?.name });
+        this.setSyncStatus("CONNECTING ROOM");
         this.joinChatTransport(roomId);
         this.emit({ type: "sv_roomData", id: roomId });
         this.publishPresence();
@@ -191,11 +226,21 @@ class PictoP2PWebSocket {
     }
 
     joinChatTransport(roomId) {
-        if (this.room) this.room.leave();
-        this.room = this.joinRoom(this.config, `chat-${roomId}`);
-        const [sendChat, getChat] = this.room.makeAction("chat");
-        this.sendChat = sendChat;
-        getChat((payload) => this.handleIncomingChat(payload));
+        for (const transport of this.transports) {
+            try { transport.room?.leave(); } catch {}
+            const channel = `chat-${roomId}`;
+            this.log("subscribe start", { channel, roomId, strategy: transport.name });
+            transport.room = transport.joinRoom(transport.config, channel);
+            const [sendChat, getChat] = transport.room.makeAction("chat");
+            transport.sendChat = sendChat;
+            transport.room.onPeerJoin((peerId) => {
+                this.log("subscribe success", { channel, roomId, strategy: transport.name, peerId });
+                this.publishPresence(peerId, transport);
+            });
+            transport.room.onPeerLeave((peerId) => this.log("disconnect", { channel, strategy: transport.name, peerId }));
+            getChat((payload, peerId) => this.handleIncomingChat(payload, peerId, transport));
+            this.log("subscribe success", { channel, roomId, strategy: transport.name });
+        }
     }
 
     sendMessage(message) {
@@ -205,10 +250,12 @@ class PictoP2PWebSocket {
             id: this.createMessageId(),
             room: this.roomId,
             message,
+            senderId: this.userId,
             hops: 0,
             at: Date.now()
         };
         this.rememberMessage(payload.id);
+        this.log("message sent", { messageId: payload.id, roomId: payload.room });
         this.deliverChat(payload);
         [120, 450, 900].forEach((delay) => {
             setTimeout(() => {
@@ -219,10 +266,14 @@ class PictoP2PWebSocket {
 
     deliverChat(payload) {
         const deliveries = [];
-        if (this.sendChat) deliveries.push(this.sendChat(payload));
-        if (this.sendLobbyChat) deliveries.push(this.sendLobbyChat(payload));
+        for (const transport of this.transports) {
+            if (transport.sendChat) deliveries.push(transport.sendChat(payload));
+            if (transport.sendLobbyChat) deliveries.push(transport.sendLobbyChat(payload));
+        }
         Promise.allSettled(deliveries).then((results) => {
             if (results.length && results.every((result) => result.status === "rejected")) {
+                this.log("error", { message: "send failed", messageId: payload.id });
+                this.setSyncStatus("RECONNECTING");
                 this.emit(this.serverMessage("Send failed."));
             }
         });
@@ -231,49 +282,62 @@ class PictoP2PWebSocket {
     leaveCurrentRoom(emitSelf) {
         const oldRoom = this.roomId;
         this.roomId = null;
-        if (this.room) this.room.leave();
-        this.room = null;
-        this.sendChat = null;
+        for (const transport of this.transports) {
+            try { transport.room?.leave(); } catch {}
+            transport.room = null;
+            transport.sendChat = null;
+        }
+        this.log("leaveRoom", { roomId: oldRoom, userId: this.userId });
         this.publishPresence();
         if (emitSelf && oldRoom) this.emit({ type: "sv_leaveRoom" });
         this.emit({ type: "sv_roomIds", count: this.countRooms(), ids: this.rooms });
     }
 
-    handlePresence(presence, peerId) {
+    handlePresence(presence, peerId, transport) {
         if (!presence?.player) return;
-        const before = this.peers.get(peerId);
-        this.peers.set(peerId, { ...presence, seenAt: Date.now() });
+        const key = this.peerKey(transport, peerId);
+        const userId = presence.userId || presence.player.userId || key;
+        const before = this.peers.get(key);
+        const wasUserInRoom = presence.room ? this.hasUserInRoom(userId, presence.room, key) : false;
+        this.peers.set(key, { ...presence, userId, strategy: transport?.name, seenAt: Date.now() });
+        this.log("presence received", { users: this.currentUsers(), from: userId, roomId: presence.room, strategy: transport?.name });
         if (before?.room === presence.room) {
             this.emit({ type: "sv_roomIds", count: this.countRooms(), ids: this.rooms });
             return;
         }
-        if (before?.room && before.room === this.roomId) {
+        if (before?.room && before.room === this.roomId && !this.hasUserInRoom(userId, before.room, key)) {
             this.emit({ type: "sv_playerLeft", player: before.player, id: before.room });
         }
-        if (presence.room && presence.room === this.roomId) {
+        if (presence.room && presence.room === this.roomId && !wasUserInRoom) {
             this.emit({ type: "sv_playerJoined", player: presence.player, id: presence.room });
         }
         this.emit({ type: "sv_roomIds", count: this.countRooms(), ids: this.rooms });
         this.markSynced();
-        this.publishPresence(peerId);
+        this.publishPresence(peerId, transport);
     }
 
-    handlePeerLeave(peerId) {
-        const peer = this.peers.get(peerId);
-        this.peers.delete(peerId);
-        if (peer?.room && peer.room === this.roomId) {
+    handlePeerLeave(peerId, transport) {
+        const key = this.peerKey(transport, peerId);
+        const peer = this.peers.get(key);
+        this.peers.delete(key);
+        this.log("disconnect", { peerId, strategy: transport?.name, userId: peer?.userId });
+        if (peer?.room && peer.room === this.roomId && !this.hasUserInRoom(peer.userId, peer.room)) {
             this.emit({ type: "sv_playerLeft", player: peer.player, id: peer.room });
         }
         this.emit({ type: "sv_roomIds", count: this.countRooms(), ids: this.rooms });
     }
 
-    handleIncomingChat(payload) {
+    handleIncomingChat(payload, peerId, transport) {
         const message = payload?.message || payload;
         const room = payload?.room || this.roomId;
         const id = payload?.id || payload?.messageId || null;
         if (!message || room !== this.roomId) return;
-        if (id && this.seenMessageIds.has(id)) return;
+        if (id && this.seenMessageIds.has(id)) {
+            this.log("message duplicate skip", { messageId: id, from: payload?.senderId, strategy: transport?.name });
+            return;
+        }
         if (id) this.rememberMessage(id);
+        this.log("message received", { messageId: id, from: payload?.senderId || peerId, roomId: room, strategy: transport?.name });
         this.relayChat(payload);
         this.emit({ type: "sv_receivedMessage", message });
         this.markSynced();
@@ -283,8 +347,10 @@ class PictoP2PWebSocket {
         const hops = Number(payload?.hops || 0);
         if (!payload?.id || hops >= 2) return;
         const relayed = { ...payload, hops: hops + 1, relayedAt: Date.now() };
-        this.sendChat?.(relayed).catch(() => {});
-        this.sendLobbyChat?.(relayed).catch(() => {});
+        for (const transport of this.transports) {
+            transport.sendChat?.(relayed).catch(() => {});
+            transport.sendLobbyChat?.(relayed).catch(() => {});
+        }
     }
 
     createMessageId() {
@@ -299,9 +365,18 @@ class PictoP2PWebSocket {
         this.seenMessageIds.delete(first);
     }
 
-    publishPresence(peerId) {
-        if (!this.sendPresence || !this.player) return;
-        this.sendPresence({ player: this.player, room: this.roomId, at: Date.now() }, peerId).catch(() => {});
+    publishPresence(peerId, onlyTransport) {
+        if (!this.player) return;
+        const payload = { userId: this.userId, player: this.player, room: this.roomId, at: Date.now() };
+        const targets = onlyTransport ? [onlyTransport] : this.transports;
+        for (const transport of targets) {
+            if (!transport?.sendPresence) continue;
+            transport.sendPresence(payload, peerId).then(() => {
+                this.log("presence sent", { userId: this.userId, roomId: this.roomId, strategy: transport.name, peerId });
+            }).catch((error) => {
+                this.log("error", { message: "presence send failed", strategy: transport.name, error: error?.message });
+            });
+        }
     }
 
     syncBurst(status) {
@@ -311,7 +386,7 @@ class PictoP2PWebSocket {
                 this.prunePeers();
                 this.publishPresence();
                 this.emit({ type: "sv_roomIds", count: this.countRooms(), ids: this.rooms });
-                if (delay >= 700) this.markSynced();
+                if (delay >= 700) this.updateReadyStatus();
             }, delay);
         });
     }
@@ -322,6 +397,7 @@ class PictoP2PWebSocket {
             this.prunePeers();
             this.publishPresence();
             this.emit({ type: "sv_roomIds", count: this.countRooms(), ids: this.rooms });
+            this.updateReadyStatus();
         }, 1000);
         window.addEventListener("focus", () => this.syncBurst("SYNCING ROOMS"));
         window.addEventListener("pagehide", () => this.shutdownTransport());
@@ -347,16 +423,21 @@ class PictoP2PWebSocket {
         const oldRoom = this.roomId;
         this.roomId = null;
         if (oldRoom) this.publishPresence();
-        try { this.room?.leave(); } catch {}
-        try { this.lobby?.leave(); } catch {}
+        for (const transport of this.transports) {
+            try { transport.room?.leave(); } catch {}
+            try { transport.lobby?.leave(); } catch {}
+        }
+        this.log("disconnect", { reason: "pagehide", roomId: oldRoom });
     }
 
     countRooms() {
-        const counts = this.rooms.map((room) => (this.roomId === room ? 1 : 0));
+        const counts = this.rooms.map(() => 0);
+        const usersByRoom = new Map(this.rooms.map((room) => [room, new Set()]));
+        if (this.roomId) usersByRoom.get(this.roomId)?.add(this.userId);
         for (const peer of this.peers.values()) {
-            const index = this.rooms.indexOf(peer.room);
-            if (index >= 0) counts[index] += 1;
+            if (usersByRoom.has(peer.room)) usersByRoom.get(peer.room).add(peer.userId || peer.player?.userId || peer.player?.name);
         }
+        this.rooms.forEach((room, index) => counts[index] = usersByRoom.get(room).size);
         return counts;
     }
 
@@ -399,14 +480,63 @@ class PictoP2PWebSocket {
         if (this.syncStatusTimer) clearTimeout(this.syncStatusTimer);
     }
 
-    markSynced() {
+    markSynced(text = "P2P READY") {
         const node = document.getElementById("picto_sync_status");
         if (!node) return;
-        node.textContent = "P2P READY";
+        node.textContent = text;
         if (this.syncStatusTimer) clearTimeout(this.syncStatusTimer);
         this.syncStatusTimer = setTimeout(() => {
             node.style.display = "none";
         }, 1200);
+    }
+
+    updateReadyStatus() {
+        if (!this.roomId) {
+            this.markSynced();
+            return;
+        }
+        if (this.countRooms()[this.rooms.indexOf(this.roomId)] > 1) {
+            this.markSynced();
+        } else {
+            this.setSyncStatus("WAITING PEERS");
+        }
+    }
+
+    getUserId() {
+        try {
+            let userId = sessionStorage.getItem("picto_user_id");
+            if (!userId) {
+                userId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+                sessionStorage.setItem("picto_user_id", userId);
+            }
+            return userId;
+        } catch {
+            return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        }
+    }
+
+    peerKey(transport, peerId) {
+        return `${transport?.name || "unknown"}:${peerId}`;
+    }
+
+    hasUserInRoom(userId, roomId, exceptKey) {
+        for (const [key, peer] of this.peers.entries()) {
+            if (key !== exceptKey && peer.userId === userId && peer.room === roomId) return true;
+        }
+        return false;
+    }
+
+    currentUsers() {
+        const users = new Map();
+        if (this.player) users.set(this.userId, { userId: this.userId, name: this.player.name, room: this.roomId });
+        for (const peer of this.peers.values()) {
+            users.set(peer.userId || peer.player?.name, { userId: peer.userId, name: peer.player?.name, room: peer.room });
+        }
+        return Array.from(users.values());
+    }
+
+    log(event, details = {}) {
+        console.log(`[PictoChat] ${event}`, details);
     }
 
     emit(packet) {
