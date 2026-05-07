@@ -87,7 +87,7 @@ class PictoP2PWebSocket {
         this.sendChat = null;
         this.presenceInterval = null;
         this.syncStatusTimer = null;
-        this.peerTtlMs = 30000;
+        this.peerTtlMs = 12000;
         this.rooms = ["room_a", "room_b", "room_c", "room_d"];
         this.appId = `pictochat-pages-${location.host}${location.pathname}`.replace(/[^a-z0-9_-]/gi, "-");
         window.__pictoP2P = this;
@@ -267,6 +267,8 @@ class PictoP2PWebSocket {
             this.emit({ type: "sv_roomIds", count: this.countRooms(), ids: this.rooms });
         }, 2000);
         window.addEventListener("focus", () => this.syncBurst("SYNCING ROOMS"));
+        window.addEventListener("pagehide", () => this.shutdownTransport());
+        window.addEventListener("beforeunload", () => this.shutdownTransport());
         document.addEventListener("visibilitychange", () => {
             if (!document.hidden) this.syncBurst("SYNCING ROOMS");
         });
@@ -282,6 +284,14 @@ class PictoP2PWebSocket {
             }
         }
         if (changed) this.emit({ type: "sv_roomIds", count: this.countRooms(), ids: this.rooms });
+    }
+
+    shutdownTransport() {
+        const oldRoom = this.roomId;
+        this.roomId = null;
+        if (oldRoom) this.publishPresence();
+        try { this.room?.leave(); } catch {}
+        try { this.lobby?.leave(); } catch {}
     }
 
     countRooms() {
