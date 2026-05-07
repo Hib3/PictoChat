@@ -1,115 +1,445 @@
-<!doctype html>
-<html lang="ja">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#bfbfbf">
-    <title>PictoChat Online</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
-    <link rel="manifest" href="./manifest.webmanifest">
-    <link rel="icon" href="./icon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="./styles.css">
-    <script type="module" src="./app.js"></script>
-  </head>
-  <body>
-    <div class="ds-shell">
-      <section id="loginView" class="login-view" aria-labelledby="loginTitle">
-        <form id="loginForm" class="login-box" autocomplete="off">
-          <h1 id="loginTitle">
-            <span>Connect to</span>
-            <strong>PICT☻CHAT<br>ONLINE</strong>
-          </h1>
-          <label for="nameInput">Username:</label>
-          <input id="nameInput" name="name" type="text" inputmode="text" maxlength="16" required>
-          <label>Color:</label>
-          <button id="colorButton" class="color-swatch" type="button" aria-label="色をランダム変更"></button>
-          <button class="connect-button" type="submit">CONNECT</button>
-        </form>
-      </section>
+<html lang="en">
+<head>
+    <title>PictoChat Online, by ayunami2000.</title>
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1, minimal-ui"/>
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta name="mobile-web-app-capable" content="yes"/>
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+    <meta name="format-detection" content="telephone=no"/>
+    <link rel="apple-touch-icon" sizes="144x144" href="icon.png"/>
+    <link rel="icon" type="image/png" sizes="144x144" href="icon.png"/>
+    <meta name="msapplication-TileImage" content="icon.png"/>
+    <meta name="msapplication-TileColor" content="#fff"/>
+    <meta name="theme-color" content="#fff"/>
+    <link rel="icon" type="image/png" href="icon.png"/>
+    <meta name="title" content="PictoChat Online, by ayunami2000."/>
+    <meta name="description" content="PictoChat Online P2P PWA for GitHub Pages."/>
+    <meta property="og:type" content="website"/>
+    <meta property="og:url" content="https://pict.chat"/>
+    <meta property="og:title" content="PictoChat Online, by ayunami2000."/>
+    <meta property="og:description" content="PictoChat Online P2P PWA for GitHub Pages."/>
+    <meta property="og:image" content="welcome.png"/>
+    <meta property="twitter:card" content="summary_large_image"/>
+    <meta property="twitter:url" content="https://pict.chat"/>
+    <meta property="twitter:title" content="PictoChat Online, by ayunami2000."/>
+    <meta property="twitter:description" content="PictoChat Online P2P PWA for GitHub Pages."/>
+    <meta name="twitter:image" content="welcome.png"/>
+    <link rel="manifest" href="manifest.webmanifest"/>
+    <script src="fontfaceobserver.js"></script>
+    <script src="howler.min.js"></script>
+    <script src="pixi.min.js"></script>
+    <link rel="stylesheet" href="nano.min.css"/>
+    <script src="pickr.min.js"></script>
+    <style>
+        /*** iPhone and iOS Form Input Zoom Fixes ***/
+        /* Fix Input Zoom on devices older than iPhone 5: */
+        @media screen and (device-aspect-ratio: 2/3) {
+            select, textarea, input[type="text"], input[type="password"],
+            input[type="datetime"], input[type="datetime-local"],
+            input[type="date"], input[type="month"], input[type="time"],
+            input[type="week"], input[type="number"], input[type="email"],
+            input[type="url"] {
+                font-size: 16px;
+            }
+        }
 
-      <main id="roomView" class="room-view is-hidden" aria-label="ルーム選択">
-        <aside class="room-rail">
-          <div class="rail-dot rail-dot-top"></div>
-          <div class="rail-dot rail-dot-middle"></div>
-        </aside>
-        <section class="room-stage">
-          <div class="stripe-space"></div>
-          <header class="picto-title">PICT☻CHAT</header>
-          <p class="join-copy">Choose a Chat Room to join.</p>
-          <section class="room-list" aria-label="チャットルーム">
-            <button class="room-card" type="button" data-room="0">
-              <span class="room-letter">A</span>
-              <span class="room-name">Chat Room A</span>
-              <span class="room-count"><span class="person-icon"></span><strong data-count="0">0</strong>/16</span>
-            </button>
-            <button class="room-card" type="button" data-room="1">
-              <span class="room-letter">B</span>
-              <span class="room-name">Chat Room B</span>
-              <span class="room-count"><span class="person-icon"></span><strong data-count="1">0</strong>/16</span>
-            </button>
-            <button class="room-card" type="button" data-room="2">
-              <span class="room-letter">C</span>
-              <span class="room-name">Chat Room C</span>
-              <span class="room-count"><span class="person-icon"></span><strong data-count="2">0</strong>/16</span>
-            </button>
-            <button class="room-card" type="button" data-room="3">
-              <span class="room-letter">D</span>
-              <span class="room-name">Chat Room D</span>
-              <span class="room-count"><span class="person-icon"></span><strong data-count="3">0</strong>/16</span>
-            </button>
-          </section>
-          <div class="bottom-lime"></div>
-        </section>
-      </main>
+        /* Fix Input Zoom on iPhone 5, 5C, 5S, iPod Touch 5g */
+        @media screen and (device-aspect-ratio: 40/71) {
+            select, textarea, input[type="text"], input[type="password"],
+            input[type="datetime"], input[type="datetime-local"],
+            input[type="date"], input[type="month"], input[type="time"],
+            input[type="week"], input[type="number"], input[type="email"],
+            input[type="url"] {
+                font-size: 16px;
+            }
+        }
 
-      <main id="chatView" class="chat-view is-hidden" aria-label="チャット">
-        <aside class="tool-rail" aria-label="ツール">
-          <div class="signal-icon">▥</div>
-          <div class="rail-dots"></div>
-          <button id="roomBackButton" class="channel-badge" type="button" aria-label="ルーム選択へ">A</button>
-          <button class="rail-arrow" type="button" aria-label="上">▲</button>
-          <button class="rail-menu" type="button" aria-label="メニュー">≡</button>
-          <button class="rail-arrow" type="button" aria-label="下">▼</button>
-          <div class="rail-dots"></div>
-          <button id="penButton" class="rail-tool is-active" type="button" aria-label="ペン">╱</button>
-          <button id="eraseButton" class="rail-tool" type="button" aria-label="消しゴム">▱</button>
-          <button id="clearButton" class="rail-tool" type="button" aria-label="全消し">■</button>
-          <button class="rail-tool small-dot" type="button" aria-label="細線">▪</button>
-          <div class="rail-dots"></div>
-          <button class="rail-icon" type="button" aria-label="文字">A1</button>
-          <button class="rail-icon" type="button" aria-label="人">♙</button>
-          <button class="rail-icon" type="button" aria-label="かな">あ</button>
-          <button class="rail-icon" type="button" aria-label="記号">@</button>
-          <button class="rail-icon" type="button" aria-label="顔">☻</button>
-        </aside>
+        /* Fix Input Zoom on iPhone 6, iPhone 6s, iPhone 7  */
+        @media screen and (device-aspect-ratio: 375/667) {
+            select, textarea, input[type="text"], input[type="password"],
+            input[type="datetime"], input[type="datetime-local"],
+            input[type="date"], input[type="month"], input[type="time"],
+            input[type="week"], input[type="number"], input[type="email"],
+            input[type="tel"], input[type="url"] {
+                font-size: 16px;
+            }
+        }
 
-        <section class="chat-stage">
-          <div class="stripe-space"></div>
-          <header class="picto-title">PICT☻CHAT</header>
-          <section id="messages" class="messages" aria-live="polite"></section>
-          <section class="composer" aria-label="送信欄">
-            <button id="closeComposer" class="mini-close" type="button" aria-label="閉じる">×</button>
-            <div class="draw-card">
-              <div class="draft-strip">
-                <span id="draftName" class="draft-name">user</span>
-                <textarea id="draftInput" class="draft-input" maxlength="160" rows="2" aria-label="本文"></textarea>
-              </div>
-              <canvas id="drawCanvas" class="draw-canvas" width="640" height="300" aria-label="手書き入力"></canvas>
-            </div>
-            <div class="keyboard-panel">
-              <div id="keyboard" class="keyboard" aria-label="画面キーボード"></div>
-              <div class="send-stack">
-                <button class="send-side" type="button" aria-label="上">▲</button>
-                <button id="sendButton" class="send-button" type="button">SEND</button>
-                <button class="send-side" type="button" aria-label="下">▼</button>
-                <button id="backspaceButton" class="send-side" type="button" aria-label="削除">←</button>
-              </div>
-            </div>
-          </section>
-        </section>
-      </main>
+        /* Fix Input Zoom on iPhone 6 Plus, iPhone 6s Plus, iPhone 7 Plus, iPhone 8, iPhone X, XS, XS Max  */
+        @media screen and (device-aspect-ratio: 9/16) {
+            select, textarea, input[type="text"], input[type="password"],
+            input[type="datetime"], input[type="datetime-local"],
+            input[type="date"], input[type="month"], input[type="time"],
+            input[type="week"], input[type="number"], input[type="email"],
+            input[type="tel"], input[type="url"] {
+                font-size: 16px;
+            }
+        }
+
+        @font-face {
+            font-family: "nds";
+            src: url("nds.ttf");
+        }
+
+        body {
+            background-image: url('images/body-bg.png');
+            margin: 0;
+            font-size: 16px;
+        }
+
+        #root {
+            margin-left: auto;
+            margin-right: auto;
+            border: 1px solid black;
+            box-shadow: 0 0 10px black;
+        }
+
+        canvas {
+            position: absolute;
+        }
+
+        #topy {
+            position: absolute;
+            z-index: 1000000;
+            opacity: 0;
+        }
+
+        #intro {
+            position: absolute;
+            z-index: 10;
+            text-align: center;
+        }
+
+        #main-settings {
+            transform-origin: top;
+            transform: scale(1);
+        }
+
+        #intro_bg {
+            width: 100%;
+            position: absolute;
+            z-index: -1;
+            margin-left: -50%;
+        }
+
+        #root #intro img {
+            image-rendering: pixelated;
+        }
+
+        #logo {
+            display: block;
+            margin: 50px auto 15px;
+            transform-origin: bottom center;
+            cursor: pointer;
+            transform: scale(1);
+        }
+
+        input[type=text] {
+            display: inline-block;
+            border: 1px solid black;
+            font-family: nds;
+            font-size: 62.5%;
+            border-radius: 0;
+            padding-left: 2px;
+            padding-right: 2px;
+            padding-top: 5px;
+            padding-bottom: 5px;
+            width: 93px;
+            font-smooth: never;
+            text-align: center;
+            margin-top: 5px;
+        }
+
+        .pickr {
+            margin-top: 5px;
+        }
+
+        .pcr-button {
+            width: 93px !important;
+            border: 1px solid black;
+            border-radius: 0 !important;
+            height: 24px !important;
+            margin-bottom: 15px;
+        }
+
+        .intro-text {
+            font-family: nds;
+            font-size: 10px;
+            width: 93px;
+            text-align: left;
+            margin-left: auto;
+            margin-right: auto;
+            margin-top: 10px;
+            font-smooth: never;
+        }
+
+        #other_settings {
+            cursor: pointer;
+        }
+
+        #settings {
+            font-family: nds;
+            font-size: 10px;
+            position: absolute;
+            z-index: 10;
+            text-align: left;
+            display: none;
+            vertical-align: middle;
+        }
+
+        #settings-container {
+            width: 200px;
+            height: 300px;
+            margin: 40px auto auto;
+            background-color: #fff;
+            border: 1px solid black;
+            padding: 10px;
+            transform-origin: top;
+            transform: scale(1);
+        }
+
+        #settings-done {
+            cursor: pointer;
+            position: relative;
+            bottom: -150px;
+            width: 90px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        html.dark body, html.dark .pcr-app, html.dark .pcr-button {
+            filter: invert(100%);
+        }
+    </style>
+
+</head>
+<body>
+
+<div id="root">
+    <div id="intro">
+        <img src="images/intro_bg.png" id="intro_bg"/>
+        <div id="main-settings">
+            <img src="images/logo_dc.png" id="logo" onclick="sounds.error.play()" title="Connecting... Please wait!" alt="Connect to PictoChat"/>
+            <div class="intro-text">Username:</div>
+            <input type="text" id="name_box" spellcheck="false" maxlength="10" onkeyup="fixUserbox(this)"/>
+            <div class="intro-text">Color:</div>
+            <div class="colorpicker"></div>
+            <img src="images/other_settings.png" id="other_settings" onclick="otherSettings()"/>
+            <br/><br/>
+        </div>
     </div>
-  </body>
+    <div id="settings">
+        <div id="settings-container">
+            <div style="margin-bottom: 5px; border-bottom: 1px solid black; padding: 5px; text-align: center;">Other
+                Settings
+            </div>
+            <label for="int-scaling"><input type="checkbox" id="int-scaling" onchange="intScaling(true)"/>
+                Integer Scaling</label><br/>
+            <label for="volume"><input type="range" id="volume" min="0" max="100" onchange="volume(this.value)"/>
+                Volume</label><br/>
+            <label for="pressure"><input type="checkbox" id="pressure" onchange="pressure(this.checked)"/>
+                Pressure Support</label><br/>
+            <label for="dark"><input type="checkbox" id="dark" onchange="dark(this.checked)"/>
+                Dark Mode</label>
+            <div id="settings-done"><img src="images/done.png" onclick="closeOtherSettings()"/></div>
+        </div>
+    </div>
+    <input type="password" id="topy" style="display: none;" maxlength="0" autocorrect="off" autocapitalize="off"
+           autocomplete="off"/>
+</div>
+<script>
+    let darkMode = false;
+    const swatches = [
+        '#61829a',
+        '#ba4900',
+        '#fb0018',
+        '#fb8afb',
+        '#fb9200',
+        '#f3e300',
+        '#aafb00',
+        '#00fb00',
+        '#00a238',
+        '#49db8a',
+        '#30baf3',
+        '#0059f3',
+        '#000092',
+        '#8a00d3',
+        '#d300eb',
+        '#fb0092'
+    ];
+    let defaultColor = swatches[Math.floor(Math.random() * swatches.length)];
+    if (localStorage.getItem("color") == null) {
+        localStorage.setItem("color", defaultColor);
+    } else {
+        defaultColor = localStorage.getItem("color");
+    }
+    const pickr = Pickr.create({
+        el: '.colorpicker',
+        theme: 'nano',
+        swatches: swatches,
+        default: defaultColor,
+        comparison: false,
+        components: {
+            preview: true,
+            opacity: false,
+            hue: true,
+            interaction: {
+                input: true,
+                hex: true,
+                rgba: true
+            }
+        }
+    });
+
+    if (localStorage.getItem("username") == null) {
+        localStorage.setItem("username", "user" + (Math.floor(Math.random() * 1000000)));
+    }
+    if (localStorage.getItem("intScaling") == null) {
+        localStorage.setItem("intScaling", false);
+    }
+
+    document.getElementById("int-scaling").checked = (localStorage.getItem("intScaling") === "true");
+
+    document.getElementById("volume").value = localStorage.getItem("volume") == null ? 100 : +localStorage.getItem("volume");
+    volume(document.getElementById("volume").value);
+
+    document.getElementById("pressure").checked = localStorage.getItem("pressure") == null ? false : (localStorage.getItem("pressure") === "true");
+    pressure(document.getElementById("pressure").checked);
+
+    document.getElementById("dark").checked = localStorage.getItem("dark") == null ? false : (localStorage.getItem("dark") === "true");
+    if (document.getElementById("dark").checked) {
+        dark(true, true);
+    }
+
+    document.getElementById("name_box").value = localStorage.getItem("username");
+
+    function fixUserbox(object) {
+        object.value = object.value.replace(/[^\w\s]/gi, '');
+    }
+
+    let token = true; // set this to true if no captcha
+
+    function setVerificationToken(t) {
+        token = t;
+        if (token === "invalid_domain") document.getElementById("captcha").style.opacity = 0;
+    }
+
+    let authed = false;
+
+    function requestVerification() {
+        if (!token) return;
+        if (authed) return;
+        const color = pickr.getColor().toHEXA().toString().replace("#", "0x");
+        playerData.name = document.getElementById("name_box").value;
+        playerData.name = playerData.name.replace(/[^\w\s]/gi, '');
+        playerData.color = parseInt(color, 16);
+        const obj = {type: 'cl_verifyName', player: playerData, token: token};
+        websocket.send(JSON.stringify(obj));
+        authed = true;
+    }
+
+    function start() {
+        sounds.start_app.play();
+        updatePlayerData();
+        document.getElementById("intro").style.opacity = 1.5;
+        const cap = document.getElementById("captcha");
+        if (cap) cap.style.display = "none";
+        let margin = 50 * SCALE;
+        let marginBottom = 15;
+        const interval = setInterval(function () {
+            margin -= 7;
+            marginBottom += 7 / SCALE;
+            document.getElementById("logo").style.marginTop = margin;
+            document.getElementById("logo").style.marginBottom = marginBottom;
+            document.getElementById("intro").style.opacity -= 0.02;
+            if (document.getElementById("intro").style.opacity <= 0) {
+                clearInterval(interval);
+                document.getElementById("intro").style.display = "none";
+                if (window.location.hash && window.location.hash.length === 7) {
+                    pc_sprites.roomButtons[pc_sprites.roomButtons.length - 1].emit("pointerup");
+                    let int = setInterval(function () {
+                        if (joinedRoom) {
+                            clearInterval(int);
+                            gotFirstMsg = 2;
+                        }
+                    }, 100);
+                }
+            }
+        }, 1000 / 60);
+    }
+
+    function otherSettings() {
+        document.getElementById("settings").style.opacity = 0;
+        document.getElementById("settings").style.display = "block";
+        const interval = setInterval(function () {
+            document.getElementById("settings").style.opacity = parseFloat(document.getElementById("settings").style.opacity) + 0.05;
+            if (document.getElementById("settings").style.opacity >= 1) {
+                clearInterval(interval);
+                document.getElementById("settings").style.opacity = 1;
+            }
+        }, 1000 / 60);
+    }
+
+    function closeOtherSettings() {
+        document.getElementById("settings").style.opacity = 1;
+        const interval = setInterval(function () {
+            document.getElementById("settings").style.opacity = parseFloat(document.getElementById("settings").style.opacity) - 0.05;
+            if (document.getElementById("settings").style.opacity <= 0) {
+                clearInterval(interval);
+                document.getElementById("settings").style.opacity = 0;
+                document.getElementById("settings").style.display = "none";
+            }
+        }, 1000 / 60);
+    }
+
+    function intScaling(set) {
+        if (set)
+            localStorage.setItem("intScaling", document.getElementById("int-scaling").checked);
+        const height = (window.innerHeight - 2) / 384;
+        const width = (window.innerWidth - 2) / 256;
+        SCALE = width > height ? height : width;
+        scaleStage();
+        if (localStorage.getItem("intScaling") === "true") {
+            SCALE = Math.floor(SCALE);
+            scaleStage();
+        }
+    }
+
+    window.onresize = function() {
+        intScaling(false);
+    };
+
+    function volume(vol) {
+        localStorage.setItem("volume", vol + "");
+        Howler.volume(vol / 100);
+    }
+
+    function pressure(p) {
+        localStorage.setItem("pressure", p);
+        PRESSURE = p;
+    }
+
+    function dark(d, s) {
+        darkMode = d;
+        localStorage.setItem("dark", d);
+        if (d) {
+            document.documentElement.classList.add("dark");
+        } else {
+            document.documentElement.classList.remove("dark");
+        }
+        if (!s) window.location.reload();
+    }
+</script>
+<script src="p2p-bridge.js"></script>
+<script src="main.js"></script>
+<script>
+    intScaling(false);
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+            navigator.serviceWorker.register("./sw.js").catch(function () {});
+        });
+    }
+</script>
+
+</body>
 </html>

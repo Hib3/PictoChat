@@ -1,11 +1,17 @@
-const CACHE_NAME = "picto-pwa-chat-v2";
+const CACHE_NAME = "picto-pwa-chat-v3";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css",
-  "./app.js",
+  "./main.js",
+  "./p2p-bridge.js",
+  "./pixi.min.js",
+  "./howler.min.js",
+  "./fontfaceobserver.js",
+  "./pickr.min.js",
+  "./nano.min.css",
+  "./nds.ttf",
   "./manifest.webmanifest",
-  "./icon.svg"
+  "./icon.png"
 ];
 
 self.addEventListener("install", (event) => {
@@ -26,7 +32,12 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   event.respondWith(
     caches.match(event.request).then((cached) => {
-      return cached || fetch(event.request);
+      return cached || fetch(event.request).then((response) => {
+        if (!response || response.status !== 200 || response.type === "opaque") return response;
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        return response;
+      });
     })
   );
 });
