@@ -261,7 +261,13 @@ function renderMessages() {
   }
 
   messages.append(fragment);
-  scrollToConversationBottom();
+  scrollMessagesToBottom();
+}
+
+function scrollMessagesToBottom() {
+  requestAnimationFrame(() => {
+    messages.scrollTop = messages.scrollHeight;
+  });
 }
 
 function scrollToConversationBottom() {
