@@ -127,6 +127,8 @@ loaderFunc = (loader, resources) => {
     const keys_SYMBOLS = [" ", "ENTER", "BACKSPACE", "!", "+", "「", "%", "^", "?", "&", "″", "'", "⁓", ":", ";", "@", "~", "_", "-", "*", "/", "×", "÷", "=", "→", "←", "↑", "↓", "」", "“", "”", "(", ")", "<", ">", "{", "}", "•", "♨", "〒", "#", "♭", "♪", "±", "$", "¢", "£", "\\", "°", "|", "／", "＼", "∞", "∴", "…", "™", "©", "®"];
     const keys_EMOJIS = [" ", "ENTER", "BACKSPACE", "1", "☸", "☰", "☶", "➔", "2", "3", "4", "5", "6", "7", "8", "9", "0", "=", "☹", "☺", "☻", "☼", "☁", "☂", "☃", "✉", "☎", "☄", "☱", "☲", "☳", "☴", "☵", "✜", "♠", "♦", "♥", "♣", "☷", "+", "-", "✫", "✲", "◇", "□", "△", "▽", "◎", "➕", "➖", "➗", "✬", "✱", "◆", "■", "▲", "▼", "✕"];
     const jpModChars = ["がざだばぎじぢびぐずづぶげぜでべごぞどぼガザダバギジヂビヴグズヅブゲゼデベゴゾドボ".split(""), "ぱぴぷぺぽパピプペポ".split(""), "ぁゃゎぃゅぅっょぇぉァヵャヮィュゥッョェヶォ".split("")];
+    let composingText = false;
+    let lastTextCommit = {text: "", at: 0};
 
     topyElem.onkeydown = function () {
         if (joinedRoom) sounds.key_down.play();
@@ -158,14 +160,7 @@ loaderFunc = (loader, resources) => {
     topyElem.onpaste = function (e) {
         if (!joinedRoom) return;
         e.preventDefault();
-        let chars = (e.clipboardData || window.clipboardData).getData("text").split("");
-        for (let i = 0; i < chars.length; i++) {
-            if (chars[i] === "\n") {
-                addCharacterDirect("ENTER");
-            } else {
-                addCharacterDirect(chars[i]);
-            }
-        }
+        commitTextInput((e.clipboardData || window.clipboardData).getData("text"));
     };
 
     window.onpaste = function (e) {
@@ -274,26 +269,35 @@ loaderFunc = (loader, resources) => {
 
     if (/apple/i.test(navigator.vendor)) {
         topyElem.onkeyup = keyUpEv;
-    } else {
-        topyElem.onbeforeinput = function (e) {
-            if (!joinedRoom) return;
-            if (e.inputType === "deleteContentBackward") return addCharacterDirect("BACKSPACE");
-            if (e.inputType === "insertLineBreak") return addCharacterDirect("ENTER");
-            if (!e.data) return;
-            let chars = e.data.split("");
-            for (let i = 0; i < chars.length; i++) {
-                if (chars[i] === "\n") {
-                    addCharacterDirect("ENTER");
-                } else {
-                    addCharacterDirect(chars[i]);
-                }
-            }
-        };
     }
+    topyElem.onbeforeinput = function (e) {
+        if (!joinedRoom) return;
+        if (e.isComposing || e.inputType === "insertCompositionText") return;
+        e.preventDefault();
+        if (e.inputType === "deleteContentBackward") return addCharacterDirect("BACKSPACE");
+        if (e.inputType === "insertLineBreak") return addCharacterDirect("ENTER");
+        if (!e.data) return;
+        commitTextInput(e.data);
+    };
+    topyElem.oninput = function () {
+        if (!joinedRoom || composingText || !topyElem.value) return;
+        commitTextInput(topyElem.value);
+        topyElem.value = "";
+    };
+    topyElem.oncompositionstart = function () {
+        composingText = true;
+    };
+    topyElem.oncompositionend = function (e) {
+        composingText = false;
+        if (!joinedRoom) return;
+        commitTextInput(e.data || topyElem.value);
+        topyElem.value = "";
+    };
     window.onkeydown = function (e) {
         if (e.target === topyElem) {
             const key = e.key.replace("Backspace", "BACKSPACE").replace("Enter", "ENTER");
-            if (key.length === 1 || key === "BACKSPACE" || key === "ENTER") {
+            if (composingText || e.isComposing || key === "Process") return;
+            if (key === "BACKSPACE" || key === "ENTER") {
                 e.preventDefault();
                 keyDownEv(e);
             }
@@ -900,6 +904,16 @@ loaderFunc = (loader, resources) => {
         return addCharacterDirect(getKey(keyIndex));
     }
 
+    function commitTextInput(text) {
+        if (!text) return;
+        const now = Date.now();
+        if (text === lastTextCommit.text && now - lastTextCommit.at < 250) return;
+        lastTextCommit = {text, at: now};
+        for (const char of Array.from(text)) {
+            addCharacterDirect(char === "\n" ? "ENTER" : char);
+        }
+    }
+
     function addCharacterDirect(key) {
         if (key === "BACKSPACE") {
             let txt = pc_sprites.textboxes[selectedTextbox].text;
@@ -1430,8 +1444,10 @@ loaderFunc = (loader, resources) => {
                 switch (obj.type) {
                     case "sv_roomIds": {
                         roomIds = obj.ids;
-                        generateRoomButtons(obj);
-                        scaleStage();
+                        if (!joinedRoom) {
+                            generateRoomButtons(obj);
+                            scaleStage();
+                        }
                         break;
                     }
                     case "sv_roomData": {

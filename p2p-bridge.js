@@ -209,6 +209,15 @@ class PictoP2PWebSocket {
             at: Date.now()
         };
         this.rememberMessage(payload.id);
+        this.deliverChat(payload);
+        [120, 450, 900].forEach((delay) => {
+            setTimeout(() => {
+                if (this.roomId === payload.room) this.deliverChat(payload);
+            }, delay);
+        });
+    }
+
+    deliverChat(payload) {
         const deliveries = [];
         if (this.sendChat) deliveries.push(this.sendChat(payload));
         if (this.sendLobbyChat) deliveries.push(this.sendLobbyChat(payload));
@@ -297,12 +306,12 @@ class PictoP2PWebSocket {
 
     syncBurst(status) {
         this.setSyncStatus(status);
-        [0, 250, 750, 1500, 3000].forEach((delay) => {
+        [0, 100, 300, 700, 1200].forEach((delay) => {
             setTimeout(() => {
                 this.prunePeers();
                 this.publishPresence();
                 this.emit({ type: "sv_roomIds", count: this.countRooms(), ids: this.rooms });
-                if (delay >= 1500) this.markSynced();
+                if (delay >= 700) this.markSynced();
             }, delay);
         });
     }
@@ -313,7 +322,7 @@ class PictoP2PWebSocket {
             this.prunePeers();
             this.publishPresence();
             this.emit({ type: "sv_roomIds", count: this.countRooms(), ids: this.rooms });
-        }, 2000);
+        }, 1000);
         window.addEventListener("focus", () => this.syncBurst("SYNCING ROOMS"));
         window.addEventListener("pagehide", () => this.shutdownTransport());
         window.addEventListener("beforeunload", () => this.shutdownTransport());
@@ -412,6 +421,8 @@ class PictoP2PWebSocket {
 window.PictoP2PWebSocket = PictoP2PWebSocket;
 
 function installPictoInputFocusPatch() {
+    let keyboardButton = null;
+
     const focusInput = () => {
         const input = document.getElementById("topy");
         if (!input || !window.__pictoP2P?.roomId) return;
@@ -429,18 +440,59 @@ function installPictoInputFocusPatch() {
             input.focus();
         }
     };
-    document.addEventListener("pointerdown", (event) => {
-        if (event.target?.id === "name_box" || event.target?.id === "join_button") return;
-        if (event.pointerType && event.pointerType !== "touch") return;
-        const canvas = document.querySelector("#root canvas");
-        if (event.target === canvas) {
-            const rect = canvas.getBoundingClientRect();
-            const y = (event.clientY - rect.top) * 384 / rect.height;
-            if (y >= 296) return;
+
+    const ensureKeyboardButton = () => {
+        if (keyboardButton) return keyboardButton;
+        keyboardButton = document.createElement("button");
+        keyboardButton.id = "picto_keyboard_button";
+        keyboardButton.type = "button";
+        keyboardButton.textContent = "KEY";
+        keyboardButton.setAttribute("aria-label", "Keyboard input");
+        keyboardButton.style.cssText = [
+            "position:absolute",
+            "right:44px",
+            "bottom:8px",
+            "z-index:1000002",
+            "display:none",
+            "width:34px",
+            "height:22px",
+            "padding:0",
+            "border:1px solid #777",
+            "border-radius:0",
+            "background:#f7f7f7",
+            "box-shadow:inset -2px -2px #bdbdbd,inset 2px 2px #fff",
+            "color:#333",
+            "font-family:nds,monospace",
+            "font-size:10px",
+            "line-height:20px",
+            "text-align:center"
+        ].join(";");
+        keyboardButton.addEventListener("pointerdown", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+        keyboardButton.addEventListener("click", (event) => {
+            event.preventDefault();
+            focusInput();
+        });
+        document.getElementById("root")?.appendChild(keyboardButton);
+        return keyboardButton;
+    };
+
+    const updateKeyboardButton = () => {
+        const button = ensureKeyboardButton();
+        const mobileLike = matchMedia("(pointer: coarse)").matches || innerWidth <= 600;
+        if (window.__pictoP2P?.roomId && mobileLike) {
+            button.style.display = "block";
+        } else {
+            button.style.display = "none";
         }
-        setTimeout(focusInput, 0);
-    }, true);
-    window.addEventListener("resize", focusInput);
+    };
+
+    window.addEventListener("resize", updateKeyboardButton);
+    document.addEventListener("visibilitychange", updateKeyboardButton);
+    setInterval(updateKeyboardButton, 500);
+    updateKeyboardButton();
 }
 
 installPictoInputFocusPatch();
