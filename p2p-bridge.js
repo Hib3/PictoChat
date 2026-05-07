@@ -205,6 +205,7 @@ class PictoP2PWebSocket {
             id: this.createMessageId(),
             room: this.roomId,
             message,
+            hops: 0,
             at: Date.now()
         };
         this.rememberMessage(payload.id);
@@ -264,8 +265,17 @@ class PictoP2PWebSocket {
         if (!message || room !== this.roomId) return;
         if (id && this.seenMessageIds.has(id)) return;
         if (id) this.rememberMessage(id);
+        this.relayChat(payload);
         this.emit({ type: "sv_receivedMessage", message });
         this.markSynced();
+    }
+
+    relayChat(payload) {
+        const hops = Number(payload?.hops || 0);
+        if (!payload?.id || hops >= 2) return;
+        const relayed = { ...payload, hops: hops + 1, relayedAt: Date.now() };
+        this.sendChat?.(relayed).catch(() => {});
+        this.sendLobbyChat?.(relayed).catch(() => {});
     }
 
     createMessageId() {
@@ -430,7 +440,6 @@ function installPictoInputFocusPatch() {
         setTimeout(focusInput, 0);
     }, true);
     window.addEventListener("resize", focusInput);
-    setInterval(focusInput, 2000);
 }
 
 installPictoInputFocusPatch();
