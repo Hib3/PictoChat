@@ -84,10 +84,12 @@ class PictoP2PWebSocket {
         this.pending = [];
         this.room = null;
         this.sendPresence = null;
+        this.sendLobbyChat = null;
         this.sendChat = null;
         this.presenceInterval = null;
         this.syncStatusTimer = null;
         this.peerTtlMs = 12000;
+        this.seenMessageIds = new Set();
         this.rooms = ["room_a", "room_b", "room_c", "room_d"];
         this.appId = `pictochat-pages-${location.host}${location.pathname}`.replace(/[^a-z0-9_-]/gi, "-");
         window.__pictoP2P = this;
@@ -103,16 +105,20 @@ class PictoP2PWebSocket {
             this.config = {
                 appId: this.appId,
                 password: this.appId,
+                trackerRedundancy: 4,
                 rtcConfig: {
                     iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
                 }
             };
             this.lobby = joinRoom(this.config, "lobby");
             const [sendPresence, getPresence] = this.lobby.makeAction("presence");
+            const [sendLobbyChat, getLobbyChat] = this.lobby.makeAction("roomChat");
             this.sendPresence = sendPresence;
+            this.sendLobbyChat = sendLobbyChat;
             this.lobby.onPeerJoin((peerId) => this.publishPresence(peerId));
             this.lobby.onPeerLeave((peerId) => this.handlePeerLeave(peerId));
             getPresence((presence, peerId) => this.handlePresence(presence, peerId));
+            getLobbyChat((payload) => this.handleIncomingChat(payload));
             this.startPresenceLoop();
             this.readyState = 1;
             this.setSyncStatus("SYNCING ROOMS");
@@ -189,17 +195,26 @@ class PictoP2PWebSocket {
         this.room = this.joinRoom(this.config, `chat-${roomId}`);
         const [sendChat, getChat] = this.room.makeAction("chat");
         this.sendChat = sendChat;
-        getChat((payload) => {
-            if (!payload?.message) return;
-            this.emit({ type: "sv_receivedMessage", message: payload.message });
-        });
+        getChat((payload) => this.handleIncomingChat(payload));
     }
 
     sendMessage(message) {
-        if (!this.roomId || !this.sendChat || !message) return;
+        if (!this.roomId || !message) return;
         message.player = this.player || message.player || { name: "user", color: 0x99ff00 };
-        this.sendChat({ message }).catch(() => {
-            this.emit(this.serverMessage("Send failed."));
+        const payload = {
+            id: this.createMessageId(),
+            room: this.roomId,
+            message,
+            at: Date.now()
+        };
+        this.rememberMessage(payload.id);
+        const deliveries = [];
+        if (this.sendChat) deliveries.push(this.sendChat(payload));
+        if (this.sendLobbyChat) deliveries.push(this.sendLobbyChat(payload));
+        Promise.allSettled(deliveries).then((results) => {
+            if (results.length && results.every((result) => result.status === "rejected")) {
+                this.emit(this.serverMessage("Send failed."));
+            }
         });
     }
 
@@ -240,6 +255,29 @@ class PictoP2PWebSocket {
             this.emit({ type: "sv_playerLeft", player: peer.player, id: peer.room });
         }
         this.emit({ type: "sv_roomIds", count: this.countRooms(), ids: this.rooms });
+    }
+
+    handleIncomingChat(payload) {
+        const message = payload?.message || payload;
+        const room = payload?.room || this.roomId;
+        const id = payload?.id || payload?.messageId || null;
+        if (!message || room !== this.roomId) return;
+        if (id && this.seenMessageIds.has(id)) return;
+        if (id) this.rememberMessage(id);
+        this.emit({ type: "sv_receivedMessage", message });
+        this.markSynced();
+    }
+
+    createMessageId() {
+        if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+        return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    rememberMessage(id) {
+        this.seenMessageIds.add(id);
+        if (this.seenMessageIds.size <= 300) return;
+        const first = this.seenMessageIds.values().next().value;
+        this.seenMessageIds.delete(first);
     }
 
     publishPresence(peerId) {
@@ -362,6 +400,40 @@ class PictoP2PWebSocket {
 }
 
 window.PictoP2PWebSocket = PictoP2PWebSocket;
+
+function installPictoInputFocusPatch() {
+    const focusInput = () => {
+        const input = document.getElementById("topy");
+        if (!input || !window.__pictoP2P?.roomId) return;
+        const canvas = document.querySelector("#root canvas");
+        if (canvas) {
+            input.style.display = "block";
+            input.style.left = "0px";
+            input.style.top = "0px";
+            input.style.width = `${canvas.width}px`;
+            input.style.height = `${Math.floor(canvas.height / 2)}px`;
+        }
+        try {
+            input.focus({ preventScroll: true });
+        } catch {
+            input.focus();
+        }
+    };
+    document.addEventListener("pointerdown", (event) => {
+        if (event.target?.id === "name_box" || event.target?.id === "join_button") return;
+        const canvas = document.querySelector("#root canvas");
+        if (event.target === canvas) {
+            const rect = canvas.getBoundingClientRect();
+            const y = (event.clientY - rect.top) * 384 / rect.height;
+            if (y >= 296) return;
+        }
+        setTimeout(focusInput, 0);
+    }, true);
+    window.addEventListener("resize", focusInput);
+    setInterval(focusInput, 2000);
+}
+
+installPictoInputFocusPatch();
 
 const PictoNativeWebSocket = window.WebSocket;
 function PictoWebSocketShim(url, protocols) {
