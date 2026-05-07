@@ -1,6 +1,6 @@
 <html lang="en">
 <head>
-    <title>PictoChat Online, by ayunami2000.</title>
+    <title>PictoChat Online</title>
     <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1, minimal-ui"/>
     <meta name="apple-mobile-web-app-capable" content="yes"/>
     <meta name="mobile-web-app-capable" content="yes"/>
@@ -12,16 +12,16 @@
     <meta name="msapplication-TileColor" content="#fff"/>
     <meta name="theme-color" content="#fff"/>
     <link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/icon.png"/>
-    <meta name="title" content="PictoChat Online, by ayunami2000."/>
+    <meta name="title" content="PictoChat Online"/>
     <meta name="description" content="PictoChat Online P2P PWA for GitHub Pages."/>
     <meta property="og:type" content="website"/>
     <meta property="og:url" content="https://pict.chat"/>
-    <meta property="og:title" content="PictoChat Online, by ayunami2000."/>
+    <meta property="og:title" content="PictoChat Online"/>
     <meta property="og:description" content="PictoChat Online P2P PWA for GitHub Pages."/>
     <meta property="og:image" content="https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/welcome.png"/>
     <meta property="twitter:card" content="summary_large_image"/>
     <meta property="twitter:url" content="https://pict.chat"/>
-    <meta property="twitter:title" content="PictoChat Online, by ayunami2000."/>
+    <meta property="twitter:title" content="PictoChat Online"/>
     <meta property="twitter:description" content="PictoChat Online P2P PWA for GitHub Pages."/>
     <meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/welcome.png"/>
     <link rel="manifest" href="manifest.webmanifest"/>
@@ -180,6 +180,30 @@
             cursor: pointer;
         }
 
+        #join_button {
+            display: block;
+            width: 93px;
+            height: 24px;
+            margin: 10px auto 8px;
+            border: 1px solid black;
+            border-radius: 0;
+            background: #f8f8f8;
+            box-shadow: inset -2px -2px #bdbdbd, inset 2px 2px #ffffff;
+            color: black;
+            cursor: pointer;
+            font-family: nds;
+            font-size: 10px;
+            line-height: 22px;
+            padding: 0;
+            text-align: center;
+        }
+
+        #join_button:active {
+            box-shadow: inset 2px 2px #bdbdbd, inset -2px -2px #ffffff;
+            padding-left: 1px;
+            padding-top: 1px;
+        }
+
         #settings {
             font-family: nds;
             font-size: 10px;
@@ -227,6 +251,7 @@
             <input type="text" id="name_box" spellcheck="false" maxlength="10" onkeyup="fixUserbox(this)"/>
             <div class="intro-text">Color:</div>
             <div class="colorpicker"></div>
+            <button id="join_button" type="button" onclick="enterPictoChat()">JOIN</button>
             <img src="https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/images/other_settings.png" id="other_settings" onclick="otherSettings()"/>
             <br/><br/>
         </div>
@@ -342,6 +367,8 @@
     }
 
     function enterPictoChat() {
+        const joinButton = document.getElementById("join_button");
+        if (joinButton) joinButton.textContent = "JOINING";
         if (typeof websocket === "undefined" || typeof playerData === "undefined") {
             setTimeout(enterPictoChat, 100);
             return;
