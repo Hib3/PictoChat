@@ -6,30 +6,33 @@
     <meta name="mobile-web-app-capable" content="yes"/>
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
     <meta name="format-detection" content="telephone=no"/>
-    <link rel="apple-touch-icon" sizes="144x144" href="icon.png"/>
-    <link rel="icon" type="image/png" sizes="144x144" href="icon.png"/>
-    <meta name="msapplication-TileImage" content="icon.png"/>
+    <link rel="apple-touch-icon" sizes="144x144" href="https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/icon.png"/>
+    <link rel="icon" type="image/png" sizes="144x144" href="https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/icon.png"/>
+    <meta name="msapplication-TileImage" content="https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/icon.png"/>
     <meta name="msapplication-TileColor" content="#fff"/>
     <meta name="theme-color" content="#fff"/>
-    <link rel="icon" type="image/png" href="icon.png"/>
+    <link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/icon.png"/>
     <meta name="title" content="PictoChat Online, by ayunami2000."/>
     <meta name="description" content="PictoChat Online P2P PWA for GitHub Pages."/>
     <meta property="og:type" content="website"/>
     <meta property="og:url" content="https://pict.chat"/>
     <meta property="og:title" content="PictoChat Online, by ayunami2000."/>
     <meta property="og:description" content="PictoChat Online P2P PWA for GitHub Pages."/>
-    <meta property="og:image" content="welcome.png"/>
+    <meta property="og:image" content="https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/welcome.png"/>
     <meta property="twitter:card" content="summary_large_image"/>
     <meta property="twitter:url" content="https://pict.chat"/>
     <meta property="twitter:title" content="PictoChat Online, by ayunami2000."/>
     <meta property="twitter:description" content="PictoChat Online P2P PWA for GitHub Pages."/>
-    <meta name="twitter:image" content="welcome.png"/>
+    <meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/welcome.png"/>
     <link rel="manifest" href="manifest.webmanifest"/>
-    <script src="fontfaceobserver.js"></script>
-    <script src="howler.min.js"></script>
-    <script src="pixi.min.js"></script>
-    <link rel="stylesheet" href="nano.min.css"/>
-    <script src="pickr.min.js"></script>
+    <script>
+        window.PICTO_ASSET_BASE = "https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/";
+    </script>
+    <script src="https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/fontfaceobserver.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/howler.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/pixi.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/nano.min.css"/>
+    <script src="https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/pickr.min.js"></script>
     <style>
         /*** iPhone and iOS Form Input Zoom Fixes ***/
         /* Fix Input Zoom on devices older than iPhone 5: */
@@ -78,11 +81,11 @@
 
         @font-face {
             font-family: "nds";
-            src: url("nds.ttf");
+            src: url("https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/nds.ttf");
         }
 
         body {
-            background-image: url('images/body-bg.png');
+            background-image: url('https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/images/body-bg.png');
             margin: 0;
             font-size: 16px;
         }
@@ -217,14 +220,14 @@
 
 <div id="root">
     <div id="intro">
-        <img src="images/intro_bg.png" id="intro_bg"/>
+        <img src="https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/images/intro_bg.png" id="intro_bg"/>
         <div id="main-settings">
-            <img src="images/logo_dc.png" id="logo" onclick="sounds.error.play()" title="Connecting... Please wait!" alt="Connect to PictoChat"/>
+            <img src="https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/images/logo_dc.png" id="logo" onclick="sounds.error.play()" title="Connecting... Please wait!" alt="Connect to PictoChat"/>
             <div class="intro-text">Username:</div>
             <input type="text" id="name_box" spellcheck="false" maxlength="10" onkeyup="fixUserbox(this)"/>
             <div class="intro-text">Color:</div>
             <div class="colorpicker"></div>
-            <img src="images/other_settings.png" id="other_settings" onclick="otherSettings()"/>
+            <img src="https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/images/other_settings.png" id="other_settings" onclick="otherSettings()"/>
             <br/><br/>
         </div>
     </div>
@@ -241,7 +244,7 @@
                 Pressure Support</label><br/>
             <label for="dark"><input type="checkbox" id="dark" onchange="dark(this.checked)"/>
                 Dark Mode</label>
-            <div id="settings-done"><img src="images/done.png" onclick="closeOtherSettings()"/></div>
+            <div id="settings-done"><img src="https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/images/done.png" onclick="closeOtherSettings()"/></div>
         </div>
     </div>
     <input type="password" id="topy" style="display: none;" maxlength="0" autocorrect="off" autocapitalize="off"
@@ -431,7 +434,7 @@
     }
 </script>
 <script src="p2p-bridge.js"></script>
-<script src="main.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/main.js"></script>
 <script>
     intScaling(false);
     if ("serviceWorker" in navigator) {

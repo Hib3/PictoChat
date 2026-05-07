@@ -2,16 +2,15 @@ const CACHE_NAME = "picto-pwa-chat-v3";
 const ASSETS = [
   "./",
   "./index.html",
-  "./main.js",
   "./p2p-bridge.js",
-  "./pixi.min.js",
-  "./howler.min.js",
-  "./fontfaceobserver.js",
-  "./pickr.min.js",
-  "./nano.min.css",
-  "./nds.ttf",
   "./manifest.webmanifest",
-  "./icon.png"
+  "https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/icon.png",
+  "https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/pixi.min.js",
+  "https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/howler.min.js",
+  "https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/fontfaceobserver.js",
+  "https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/pickr.min.js",
+  "https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/nano.min.css",
+  "https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/nds.ttf"
 ];
 
 self.addEventListener("install", (event) => {

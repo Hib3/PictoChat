@@ -1,3 +1,76 @@
+const PICTO_ASSET_BASE = window.PICTO_ASSET_BASE || "https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/";
+
+function pictoAssetUrl(value) {
+    if (typeof value !== "string") return value;
+    if (!/^(images|sounds)\//.test(value)) return value;
+    return new URL(value, PICTO_ASSET_BASE).href;
+}
+
+function rewritePictoResource(resource) {
+    if (typeof resource === "string") return pictoAssetUrl(resource);
+    if (Array.isArray(resource)) return resource.map(rewritePictoResource);
+    if (resource && typeof resource === "object") {
+        const copy = { ...resource };
+        if (copy.url) copy.url = pictoAssetUrl(copy.url);
+        if (copy.src) copy.src = rewritePictoResource(copy.src);
+        return copy;
+    }
+    return resource;
+}
+
+function patchPictoAssetUrls() {
+    if (window.Howl && !window.Howl.__pictoPatched) {
+        const NativeHowl = window.Howl;
+        window.Howl = function PictoHowl(options, ...rest) {
+            return new NativeHowl(rewritePictoResource(options), ...rest);
+        };
+        window.Howl.prototype = NativeHowl.prototype;
+        window.Howl.__pictoPatched = true;
+    }
+
+    const imageSrc = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "src");
+    if (imageSrc && !HTMLImageElement.prototype.__pictoPatched) {
+        Object.defineProperty(HTMLImageElement.prototype, "src", {
+            get: imageSrc.get,
+            set(value) {
+                imageSrc.set.call(this, pictoAssetUrl(value));
+            }
+        });
+        HTMLImageElement.prototype.__pictoPatched = true;
+    }
+
+    if (!window.PIXI) return;
+
+    const patchStaticFrom = (target) => {
+        if (!target?.from || target.from.__pictoPatched) return;
+        const nativeFrom = target.from;
+        target.from = function PictoFrom(resource, ...rest) {
+            return nativeFrom.call(this, rewritePictoResource(resource), ...rest);
+        };
+        target.from.__pictoPatched = true;
+    };
+
+    patchStaticFrom(window.PIXI.Texture);
+    patchStaticFrom(window.PIXI.BaseTexture);
+    patchStaticFrom(window.PIXI.Sprite);
+
+    const loaderProto = window.PIXI.Loader?.prototype;
+    if (loaderProto?.add && !loaderProto.add.__pictoPatched) {
+        const nativeAdd = loaderProto.add;
+        loaderProto.add = function PictoLoaderAdd(...args) {
+            if (typeof args[0] === "string" && typeof args[1] === "string") {
+                args[1] = pictoAssetUrl(args[1]);
+            } else {
+                args[0] = rewritePictoResource(args[0]);
+            }
+            return nativeAdd.apply(this, args);
+        };
+        loaderProto.add.__pictoPatched = true;
+    }
+}
+
+patchPictoAssetUrls();
+
 class PictoP2PWebSocket {
     constructor() {
         this.readyState = 0;
@@ -191,3 +264,18 @@ class PictoP2PWebSocket {
 }
 
 window.PictoP2PWebSocket = PictoP2PWebSocket;
+
+const PictoNativeWebSocket = window.WebSocket;
+function PictoWebSocketShim(url, protocols) {
+    try {
+        const target = new URL(url, location.href);
+        if (target.host === location.host) return new PictoP2PWebSocket();
+    } catch {}
+    return new PictoNativeWebSocket(url, protocols);
+}
+PictoWebSocketShim.CONNECTING = PictoNativeWebSocket.CONNECTING ?? 0;
+PictoWebSocketShim.OPEN = PictoNativeWebSocket.OPEN ?? 1;
+PictoWebSocketShim.CLOSING = PictoNativeWebSocket.CLOSING ?? 2;
+PictoWebSocketShim.CLOSED = PictoNativeWebSocket.CLOSED ?? 3;
+PictoWebSocketShim.prototype = PictoNativeWebSocket.prototype;
+window.WebSocket = PictoWebSocketShim;

@@ -8,7 +8,7 @@
   "theme_color": "#ffffff",
   "icons": [
     {
-      "src": "./icon.png",
+      "src": "https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/icon.png",
       "sizes": "144x144",
       "type": "image/png",
       "purpose": "any maskable"
