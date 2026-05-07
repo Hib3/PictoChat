@@ -45,7 +45,8 @@ button {
   border-left: 2px solid #111;
   border-right: 2px solid #111;
   background: #bcbcbc;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 
 .login-view {
@@ -275,12 +276,10 @@ button {
 }
 
 .tool-rail {
-  position: fixed;
+  position: sticky;
   top: 0;
-  bottom: 0;
-  left: max(2px, calc((100vw - 586px) / 2 + 2px));
-  width: 43px;
-  height: 100dvh;
+  align-self: start;
+  min-height: 100dvh;
   z-index: 5;
   display: grid;
   grid-template-rows: 40px 7px 42px repeat(3, 31px) 7px repeat(4, 43px) 7px repeat(5, 38px) 1fr;
@@ -288,12 +287,6 @@ button {
   padding: 4px 4px 6px;
   justify-items: center;
   align-items: center;
-  overflow-y: auto;
-  scrollbar-width: none;
-}
-
-.tool-rail::-webkit-scrollbar {
-  display: none;
 }
 
 .rail-dots {
@@ -430,9 +423,7 @@ button {
 }
 
 .composer {
-  position: sticky;
-  bottom: 0;
-  z-index: 4;
+  position: relative;
   padding: 0 5px max(7px, env(safe-area-inset-bottom)) 8px;
   background: #bdbdbd;
 }
@@ -610,11 +601,6 @@ button {
   .room-view,
   .chat-view {
     grid-template-columns: 36px minmax(0, 1fr);
-  }
-
-  .tool-rail {
-    left: 2px;
-    width: 36px;
   }
 
   .room-stage {
