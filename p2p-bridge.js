@@ -85,8 +85,12 @@ class PictoP2PWebSocket {
         this.room = null;
         this.sendPresence = null;
         this.sendChat = null;
+        this.presenceInterval = null;
+        this.peerTtlMs = 30000;
         this.rooms = ["room_a", "room_b", "room_c", "room_d"];
         this.appId = `pictochat-pages-${location.host}${location.pathname}`.replace(/[^a-z0-9_-]/gi, "-");
+        window.__pictoP2P = this;
+        window.__pictoP2PEvents = window.__pictoP2PEvents || [];
         this.init();
     }
 
@@ -107,6 +111,7 @@ class PictoP2PWebSocket {
             this.lobby.onPeerJoin((peerId) => this.publishPresence(peerId));
             this.lobby.onPeerLeave((peerId) => this.handlePeerLeave(peerId));
             getPresence((presence, peerId) => this.handlePresence(presence, peerId));
+            this.startPresenceLoop();
             this.readyState = 1;
             this.onopen?.({ type: "open" });
             this.pending.splice(0).forEach((data) => this.send(data));
@@ -150,6 +155,7 @@ class PictoP2PWebSocket {
 
     close() {
         this.leaveCurrentRoom(false);
+        if (this.presenceInterval) clearInterval(this.presenceInterval);
         this.readyState = 3;
         this.onclose?.({ type: "close" });
     }
@@ -206,7 +212,7 @@ class PictoP2PWebSocket {
     handlePresence(presence, peerId) {
         if (!presence?.player) return;
         const before = this.peers.get(peerId);
-        this.peers.set(peerId, presence);
+        this.peers.set(peerId, { ...presence, seenAt: Date.now() });
         if (before?.room === presence.room) {
             this.emit({ type: "sv_roomIds", count: this.countRooms(), ids: this.rooms });
             return;
@@ -232,7 +238,32 @@ class PictoP2PWebSocket {
 
     publishPresence(peerId) {
         if (!this.sendPresence || !this.player) return;
-        this.sendPresence({ player: this.player, room: this.roomId }, peerId).catch(() => {});
+        this.sendPresence({ player: this.player, room: this.roomId, at: Date.now() }, peerId).catch(() => {});
+    }
+
+    startPresenceLoop() {
+        if (this.presenceInterval) clearInterval(this.presenceInterval);
+        this.presenceInterval = setInterval(() => {
+            this.prunePeers();
+            this.publishPresence();
+            this.emit({ type: "sv_roomIds", count: this.countRooms(), ids: this.rooms });
+        }, 5000);
+        window.addEventListener("focus", () => this.publishPresence());
+        document.addEventListener("visibilitychange", () => {
+            if (!document.hidden) this.publishPresence();
+        });
+    }
+
+    prunePeers() {
+        const now = Date.now();
+        let changed = false;
+        for (const [peerId, peer] of this.peers.entries()) {
+            if (peer.seenAt && now - peer.seenAt > this.peerTtlMs) {
+                this.peers.delete(peerId);
+                changed = true;
+            }
+        }
+        if (changed) this.emit({ type: "sv_roomIds", count: this.countRooms(), ids: this.rooms });
     }
 
     countRooms() {
@@ -257,6 +288,8 @@ class PictoP2PWebSocket {
     }
 
     emit(packet) {
+        window.__pictoP2PEvents?.push(packet);
+        if (window.__pictoP2PEvents?.length > 200) window.__pictoP2PEvents.shift();
         setTimeout(() => {
             this.onmessage?.({ data: JSON.stringify(packet) });
         }, 0);
