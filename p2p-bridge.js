@@ -433,6 +433,7 @@ function installPictoInputFocusPatch() {
             input.style.top = "0px";
             input.style.width = `${canvas.width}px`;
             input.style.height = `${Math.floor(canvas.height / 2)}px`;
+            input.style.pointerEvents = "none";
         }
         try {
             input.focus({ preventScroll: true });
@@ -482,10 +483,14 @@ function installPictoInputFocusPatch() {
     const updateKeyboardButton = () => {
         const button = ensureKeyboardButton();
         const mobileLike = matchMedia("(pointer: coarse)").matches || innerWidth <= 600;
+        const desktopLike = !mobileLike;
         if (window.__pictoP2P?.roomId && mobileLike) {
             button.style.display = "block";
         } else {
             button.style.display = "none";
+        }
+        if (window.__pictoP2P?.roomId && desktopLike && document.activeElement !== document.getElementById("topy")) {
+            focusInput();
         }
     };
 
