@@ -431,6 +431,7 @@ function installPictoInputFocusPatch() {
     };
     document.addEventListener("pointerdown", (event) => {
         if (event.target?.id === "name_box" || event.target?.id === "join_button") return;
+        if (event.pointerType && event.pointerType !== "touch") return;
         const canvas = document.querySelector("#root canvas");
         if (event.target === canvas) {
             const rect = canvas.getBoundingClientRect();

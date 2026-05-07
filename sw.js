@@ -1,4 +1,4 @@
-const CACHE_NAME = "picto-pwa-chat-v12";
+const CACHE_NAME = "picto-pwa-chat-v13";
 const ASSETS = [
   "./",
   "./index.html",
