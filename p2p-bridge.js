@@ -9,7 +9,7 @@ function pictoAssetUrl(value) {
 function rewritePictoResource(resource) {
     if (typeof resource === "string") return pictoAssetUrl(resource);
     if (Array.isArray(resource)) return resource.map(rewritePictoResource);
-    if (resource && typeof resource === "object") {
+    if (resource && typeof resource === "object" && resource.constructor === Object) {
         const copy = { ...resource };
         if (copy.url) copy.url = pictoAssetUrl(copy.url);
         if (copy.src) copy.src = rewritePictoResource(copy.src);
@@ -202,7 +202,7 @@ class PictoP2PWebSocket {
     }
 
     verifyName(player) {
-        const name = String(player.name || "user").replace(/[^\w\s]/gi, "").trim().slice(0, 10) || "user";
+        const name = Array.from(String(player.name || "user")).slice(0, 10).join("").trim() || "user";
         const color = Number.isFinite(player.color) ? player.color : 0x99ff00;
         this.player = { name, color, userId: this.userId };
         this.log("username set", { userId: this.userId, username: name });
