@@ -1068,23 +1068,23 @@ loaderFunc = (loader, resources) => {
         pc_sprites.textboxes = [];
         pc_sprites.textboxes[0] = new PIXI.BitmapText("", ndsFont);
         pc_sprites.textboxes[0].x = 113;
-        pc_sprites.textboxes[0].y = 211;
+        pc_sprites.textboxes[0].y = 213;
         app.stage.addChild(pc_sprites.textboxes[0]);
         pc_sprites.textboxes[1] = new PIXI.BitmapText("", ndsFont);
         pc_sprites.textboxes[1].x = 27;
-        pc_sprites.textboxes[1].y = 227;
+        pc_sprites.textboxes[1].y = 229;
         app.stage.addChild(pc_sprites.textboxes[1]);
         pc_sprites.textboxes[2] = new PIXI.BitmapText("", ndsFont);
         pc_sprites.textboxes[2].x = 27;
-        pc_sprites.textboxes[2].y = 243;
+        pc_sprites.textboxes[2].y = 245;
         app.stage.addChild(pc_sprites.textboxes[2]);
         pc_sprites.textboxes[3] = new PIXI.BitmapText("", ndsFont);
         pc_sprites.textboxes[3].x = 27;
-        pc_sprites.textboxes[3].y = 259;
+        pc_sprites.textboxes[3].y = 261;
         app.stage.addChild(pc_sprites.textboxes[3]);
         pc_sprites.textboxes[4] = new PIXI.BitmapText("", ndsFont);
         pc_sprites.textboxes[4].x = 27;
-        pc_sprites.textboxes[4].y = 275;
+        pc_sprites.textboxes[4].y = 277;
         app.stage.addChild(pc_sprites.textboxes[4]);
         scaleStage();
     }
@@ -1723,7 +1723,7 @@ loaderFunc = (loader, resources) => {
     pc_sprites.box.interactive = true;
     pc_sprites.box.on("pointerdown", function () {
         inputFlag = true;
-
+        if (window.__pictoFocusInput) window.__pictoFocusInput();
     });
     pc_sprites.box.on("pointerup", function () {
         if (this.alpha === 1) {
@@ -1744,7 +1744,7 @@ loaderFunc = (loader, resources) => {
     });
     pc_sprites.box_name = new PIXI.BitmapText(playerData.name, ndsFont_name);
     pc_sprites.box_name.x = 27;
-    pc_sprites.box_name.y = 211;
+    pc_sprites.box_name.y = 213;
     pc_sprites.box_name.alpha = 0;
     app.stage.addChild(pc_sprites.box);
     pc_sprites.drawing = new PIXI.Graphics();
