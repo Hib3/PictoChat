@@ -9,7 +9,7 @@ function pictoAssetUrl(value) {
 function rewritePictoResource(resource) {
     if (typeof resource === "string") return pictoAssetUrl(resource);
     if (Array.isArray(resource)) return resource.map(rewritePictoResource);
-    if (resource && typeof resource === "object") {
+    if (resource && typeof resource === "object" && resource.constructor === Object) {
         const copy = { ...resource };
         if (copy.url) copy.url = pictoAssetUrl(copy.url);
         if (copy.src) copy.src = rewritePictoResource(copy.src);

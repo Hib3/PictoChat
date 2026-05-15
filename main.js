@@ -108,6 +108,23 @@ loaderFunc = (loader, resources) => {
     let ndsFont = {font: '10px NintendoDSBIOS', align: 'center', tint: 0};
     let ndsFont_name = {font: '10px NintendoDSBIOS', align: 'left', tint: darkIt(playerData.color)};
     let ndsFont_jl = {font: '10px NintendoDSBIOS', align: 'left', tint: 0xd3cbc3};
+    const pictoTextStyle = {
+        fontFamily: 'DotGothic16, nds, monospace',
+        fontSize: 10,
+        lineHeight: 12,
+        fill: 0x000000,
+        padding: 2
+    };
+    function createPictoBodyText(text) {
+        const tb = new PIXI.Text(text || "", pictoTextStyle);
+        tb.resolution = Math.max(2, window.devicePixelRatio || 1);
+        return tb;
+    }
+    function getBodyTextWidth(textbox) {
+        if (!textbox) return 0;
+        if (typeof textbox.textWidth === "number") return textbox.textWidth;
+        return textbox.getLocalBounds().width;
+    }
     const pixel = PIXI.Texture.from("images/pixel.png");
     let redraw = false;
     let draggedTb = new PIXI.BitmapText("", ndsFont);
@@ -597,7 +614,7 @@ loaderFunc = (loader, resources) => {
             if (this.draggingState === 2) {
                 if (mousePos.x > 23 - dragOffset.x && mousePos.x < 21 + 245 + dragOffset.x && mousePos.y > 208 - dragOffset.y && mousePos.y < 208 + 70 - dragOffset.y
                     && !(mousePos.x <= 110 - dragOffset.x && mousePos.y <= 226 - dragOffset.y)) {
-                    let txt = new PIXI.BitmapText(draggedTb.text, ndsFont);
+                    let txt = createPictoBodyText(draggedTb.text);
                     txt.x = draggedTb.x / SCALE;
                     txt.y = draggedTb.y / SCALE;
                     pc_sprites.textboxes.push(txt);
@@ -972,7 +989,7 @@ loaderFunc = (loader, resources) => {
             if (selectedTextbox < 4) {
                 selectedTextbox++;
             } else if (selectedTextbox > 4 && pc_sprites.textboxes[selectedTextbox].y / SCALE + 16 < 278) {
-                let tb = new PIXI.BitmapText("", ndsFont);
+                let tb = createPictoBodyText("");
                 tb.x = 27 * SCALE;
                 tb.y = pc_sprites.textboxes[selectedTextbox].y + 16 * SCALE;
                 tb.scale.x *= SCALE;
@@ -987,14 +1004,14 @@ loaderFunc = (loader, resources) => {
                 selectedTextbox = 0;
             }
             pc_sprites.textboxes[selectedTextbox].text += key;
-            if (pc_sprites.textboxes[selectedTextbox].textWidth * SCALE > 225 * SCALE - (pc_sprites.textboxes[selectedTextbox].x - 27 * SCALE)) {
+            if (getBodyTextWidth(pc_sprites.textboxes[selectedTextbox]) * SCALE > 225 * SCALE - (pc_sprites.textboxes[selectedTextbox].x - 27 * SCALE)) {
                 let txt = pc_sprites.textboxes[selectedTextbox].text;
                 pc_sprites.textboxes[selectedTextbox].text = txt.substring(0, txt.length - 1);
                 if (selectedTextbox < 4) {
                     selectedTextbox++;
                     addCharacterDirect(key);
                 } else if (selectedTextbox > 4 && pc_sprites.textboxes[selectedTextbox].y / SCALE + 16 < 278) {
-                    let tb = new PIXI.BitmapText(key, ndsFont);
+                    let tb = createPictoBodyText(key);
                     tb.x = 27 * SCALE;
                     tb.y = pc_sprites.textboxes[selectedTextbox].y + 16 * SCALE;
                     tb.scale.x *= SCALE;
@@ -1066,23 +1083,23 @@ loaderFunc = (loader, resources) => {
 
     function addInitialTextboxes() {
         pc_sprites.textboxes = [];
-        pc_sprites.textboxes[0] = new PIXI.BitmapText("", ndsFont);
+        pc_sprites.textboxes[0] = createPictoBodyText("");
         pc_sprites.textboxes[0].x = 113;
         pc_sprites.textboxes[0].y = 213;
         app.stage.addChild(pc_sprites.textboxes[0]);
-        pc_sprites.textboxes[1] = new PIXI.BitmapText("", ndsFont);
+        pc_sprites.textboxes[1] = createPictoBodyText("");
         pc_sprites.textboxes[1].x = 27;
         pc_sprites.textboxes[1].y = 229;
         app.stage.addChild(pc_sprites.textboxes[1]);
-        pc_sprites.textboxes[2] = new PIXI.BitmapText("", ndsFont);
+        pc_sprites.textboxes[2] = createPictoBodyText("");
         pc_sprites.textboxes[2].x = 27;
         pc_sprites.textboxes[2].y = 245;
         app.stage.addChild(pc_sprites.textboxes[2]);
-        pc_sprites.textboxes[3] = new PIXI.BitmapText("", ndsFont);
+        pc_sprites.textboxes[3] = createPictoBodyText("");
         pc_sprites.textboxes[3].x = 27;
         pc_sprites.textboxes[3].y = 261;
         app.stage.addChild(pc_sprites.textboxes[3]);
-        pc_sprites.textboxes[4] = new PIXI.BitmapText("", ndsFont);
+        pc_sprites.textboxes[4] = createPictoBodyText("");
         pc_sprites.textboxes[4].x = 27;
         pc_sprites.textboxes[4].y = 277;
         app.stage.addChild(pc_sprites.textboxes[4]);
@@ -1109,7 +1126,7 @@ loaderFunc = (loader, resources) => {
         }
         for (let i = 0; i < prevTextboxes[scrollPos].length; i++) {
             let txt = prevTextboxes[scrollPos][i];
-            let tb = new PIXI.BitmapText(txt.text, ndsFont);
+            let tb = createPictoBodyText(txt.text);
             tb.x = txt.x;
             tb.y = txt.y;
             pc_sprites.textboxes.push(tb);
@@ -1233,7 +1250,7 @@ loaderFunc = (loader, resources) => {
             }
             txt.text = "" + txt.text;
             if (txt.text.length > 255) txt.text = txt.text.slice(0, 255);
-            let tb = new PIXI.BitmapText(txt.text, ndsFont);
+            let tb = createPictoBodyText(txt.text);
             tb.x = txt.x - pc_sprites.box.x / SCALE;
             tb.y = txt.y - pc_sprites.box.y / SCALE;
             container.addChild(tb);
@@ -1744,7 +1761,7 @@ loaderFunc = (loader, resources) => {
     });
     pc_sprites.box_name = new PIXI.BitmapText(playerData.name, ndsFont_name);
     pc_sprites.box_name.x = 27;
-    pc_sprites.box_name.y = 213;
+    pc_sprites.box_name.y = 211;
     pc_sprites.box_name.alpha = 0;
     app.stage.addChild(pc_sprites.box);
     pc_sprites.drawing = new PIXI.Graphics();
