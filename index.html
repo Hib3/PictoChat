@@ -249,7 +249,7 @@
             <div id="captcha" style="display: none; transform: scale(calc(91 / 300)); height: 65px;"></div>
             <img src="https://cdn.jsdelivr.net/gh/ayunami2000/ayunpictojava@0cd27bd3f433bb86c2f5f6d5febe114a238ef7cc/src/main/resources/www/images/logo.png" id="logo" onclick="enterPictoChat()" title="Click to join PictoChat Session!" alt="Connect to PictoChat"/>
             <div class="intro-text">Username:</div>
-            <input type="text" id="name_box" spellcheck="false" maxlength="10" onkeyup="fixUserbox(this)"/>
+            <input type="text" id="name_box" spellcheck="false" maxlength="10" inputmode="text" oninput="fixUserbox(this)"/>
             <div class="intro-text">Color:</div>
             <div class="colorpicker"></div>
             <button id="join_button" type="button" onclick="enterPictoChat()">JOIN</button>
@@ -343,7 +343,7 @@
     document.getElementById("name_box").value = localStorage.getItem("username");
 
     function fixUserbox(object) {
-        object.value = object.value.replace(/[^\w\s]/gi, '');
+        object.value = Array.from(object.value || "").slice(0, 10).join("");
     }
 
     let token = true; // set this to true if no captcha
@@ -359,8 +359,7 @@
         if (!token) return;
         if (authed) return;
         const color = pickr.getColor().toHEXA().toString().replace("#", "0x");
-        playerData.name = document.getElementById("name_box").value;
-        playerData.name = playerData.name.replace(/[^\w\s]/gi, '');
+        playerData.name = Array.from(document.getElementById("name_box").value || "").slice(0, 10).join("").trim() || "user";
         playerData.color = parseInt(color, 16);
         const obj = {type: 'cl_verifyName', player: playerData, token: token};
         websocket.send(JSON.stringify(obj));
