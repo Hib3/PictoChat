@@ -564,6 +564,13 @@ function installPictoInputFocusPatch() {
             input.style.width = `${canvas.width}px`;
             input.style.height = `${Math.floor(canvas.height / 2)}px`;
             input.style.pointerEvents = "none";
+            input.style.opacity = "0.01";
+            input.style.resize = "none";
+            input.style.border = "0";
+            input.style.padding = "0";
+            input.style.background = "transparent";
+            input.style.color = "transparent";
+            input.style.caretColor = "transparent";
         }
         try {
             input.focus({ preventScroll: true });

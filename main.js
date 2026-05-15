@@ -158,10 +158,9 @@ loaderFunc = (loader, resources) => {
         }
     };
 
-    topyElem.onpaste = function (e) {
+    topyElem.onpaste = function () {
         if (!joinedRoom) return;
-        e.preventDefault();
-        replaceTextInput(topyElem.value + (e.clipboardData || window.clipboardData).getData("text"));
+        setTimeout(renderNativeTextInput, 0);
     };
 
     window.onpaste = function (e) {
@@ -271,10 +270,7 @@ loaderFunc = (loader, resources) => {
     if (/apple/i.test(navigator.vendor)) {
         topyElem.onkeyup = keyUpEv;
     }
-    topyElem.onbeforeinput = function (e) {
-        if (!joinedRoom) return;
-        if (e.isComposing || e.inputType === "insertCompositionText") return;
-    };
+    topyElem.onbeforeinput = function () {};
     topyElem.oncompositionupdate = function () {};
     topyElem.oncompositionstart = function () {
         composingText = true;
@@ -283,12 +279,12 @@ loaderFunc = (loader, resources) => {
         composingText = false;
         if (!joinedRoom) return;
         setTimeout(() => {
-            if (!composingText) replaceTextInput(topyElem.value);
+            if (!composingText) renderNativeTextInput();
         }, 0);
     };
     topyElem.oninput = function (e) {
-        if (!joinedRoom || composingText || e.isComposing) return;
-        replaceTextInput(topyElem.value);
+        if (!joinedRoom || composingText || e.isComposing || e.inputType === "insertCompositionText") return;
+        renderNativeTextInput();
     };
     window.onkeydown = function (e) {
         if (e.target === topyElem) {
@@ -903,6 +899,10 @@ loaderFunc = (loader, resources) => {
         return addCharacterDirect(getKey(keyIndex));
     }
 
+    function renderNativeTextInput() {
+        replaceTextInput(topyElem.value);
+    }
+
     function replaceTextInput(text) {
         if (syncingTextInput || text === textInputValue) return;
         syncingTextInput = true;
@@ -911,7 +911,6 @@ loaderFunc = (loader, resources) => {
         for (const char of Array.from(textInputValue)) {
             addCharacterDirect(char === "\n" ? "ENTER" : char);
         }
-        topyElem.value = textInputValue;
         syncingTextInput = false;
     }
 
@@ -927,7 +926,7 @@ loaderFunc = (loader, resources) => {
     function syncNativeInputFromStage() {
         if (syncingTextInput) return;
         textInputValue = pc_sprites.textboxes.map((textbox) => textbox.text).join("");
-        topyElem.value = textInputValue;
+        if (document.activeElement !== topyElem) topyElem.value = textInputValue;
     }
 
     function addCharacterDirect(key) {
