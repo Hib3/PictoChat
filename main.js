@@ -300,7 +300,7 @@ loaderFunc = (loader, resources) => {
         }, 0);
     };
     topyElem.oninput = function (e) {
-        if (!joinedRoom || composingText || e.isComposing || e.inputType === "insertCompositionText") return;
+        if (!joinedRoom || composingText || e.isComposing) return;
         renderNativeTextInput();
     };
     window.onkeydown = function (e) {
