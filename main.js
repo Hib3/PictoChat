@@ -287,22 +287,34 @@ loaderFunc = (loader, resources) => {
     if (/apple/i.test(navigator.vendor)) {
         topyElem.onkeyup = keyUpEv;
     }
-    topyElem.onbeforeinput = function () {};
+    function scheduleNativeTextRender() {
+        if (!joinedRoom) return;
+        renderNativeTextInput();
+        setTimeout(renderNativeTextInput, 0);
+        requestAnimationFrame(renderNativeTextInput);
+        setTimeout(renderNativeTextInput, 32);
+        setTimeout(renderNativeTextInput, 120);
+    }
+    function watchNativeTextInput() {
+        if (!joinedRoom || document.activeElement !== topyElem || composingText) return;
+        if (topyElem.value !== textInputValue) renderNativeTextInput();
+    }
+    setInterval(watchNativeTextInput, 80);
+    topyElem.onbeforeinput = function () {
+        if (!joinedRoom || composingText) return;
+        setTimeout(renderNativeTextInput, 0);
+    };
     topyElem.oncompositionupdate = function () {};
     topyElem.oncompositionstart = function () {
         composingText = true;
     };
     topyElem.oncompositionend = function () {
         composingText = false;
-        if (!joinedRoom) return;
-        renderNativeTextInput();
-        setTimeout(() => {
-            if (!composingText) renderNativeTextInput();
-        }, 0);
+        scheduleNativeTextRender();
     };
     topyElem.oninput = function () {
         if (!joinedRoom || composingText) return;
-        renderNativeTextInput();
+        scheduleNativeTextRender();
     };
     window.onkeydown = function (e) {
         if (e.target === topyElem) {
