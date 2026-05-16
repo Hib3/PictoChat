@@ -295,12 +295,13 @@ loaderFunc = (loader, resources) => {
     topyElem.oncompositionend = function () {
         composingText = false;
         if (!joinedRoom) return;
+        renderNativeTextInput();
         setTimeout(() => {
             if (!composingText) renderNativeTextInput();
         }, 0);
     };
-    topyElem.oninput = function (e) {
-        if (!joinedRoom || composingText || e.isComposing) return;
+    topyElem.oninput = function () {
+        if (!joinedRoom || composingText) return;
         renderNativeTextInput();
     };
     window.onkeydown = function (e) {
