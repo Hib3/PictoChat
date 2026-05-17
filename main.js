@@ -1774,7 +1774,7 @@ loaderFunc = (loader, resources) => {
     });
     pc_sprites.box_name = new PIXI.BitmapText(playerData.name, ndsFont_name);
     pc_sprites.box_name.x = 27;
-    pc_sprites.box_name.y = 211;
+    pc_sprites.box_name.y = 213;
     pc_sprites.box_name.alpha = 0;
     app.stage.addChild(pc_sprites.box);
     pc_sprites.drawing = new PIXI.Graphics();
@@ -1962,7 +1962,7 @@ function scaleStage() {
     app.view.width = 256 * SCALE;
     app.view.height = 384 * SCALE;
     if (joinedRoom) {
-        topyElem.style = "width: " + app.view.width + "; height: " + (app.view.height / 2) + ";";
+        topyElem.style = "display: block; width: " + app.view.width + "px; height: " + (app.view.height / 2) + "px; pointer-events: none; opacity: 0.01; resize: none; border: 0; padding: 0; background: transparent; color: transparent; caret-color: transparent;";
     } else {
         topyElem.style = "display: none;";
     }

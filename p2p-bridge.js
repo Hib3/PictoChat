@@ -86,7 +86,7 @@ class PictoP2PWebSocket {
         this.transports = [];
         this.presenceInterval = null;
         this.syncStatusTimer = null;
-        this.peerTtlMs = 12000;
+        this.peerTtlMs = 180000;
         this.seenMessageIds = new Set();
         this.rooms = ["room_a", "room_b", "room_c", "room_d"];
         const pathRoot = location.pathname.split("/").filter(Boolean)[0] || "root";
@@ -146,7 +146,8 @@ class PictoP2PWebSocket {
             room: null,
             sendPresence,
             sendLobbyChat,
-            sendChat: null
+            sendChat: null,
+            sendRoomPresence: null
         };
         lobby.onPeerJoin((peerId) => {
             this.log("join success", { channel: "lobby", strategy: transport.name, peerId });
@@ -232,13 +233,16 @@ class PictoP2PWebSocket {
             this.log("subscribe start", { channel, roomId, strategy: transport.name });
             transport.room = transport.joinRoom(transport.config, channel);
             const [sendChat, getChat] = transport.room.makeAction("chat");
+            const [sendRoomPresence, getRoomPresence] = transport.room.makeAction("presence");
             transport.sendChat = sendChat;
+            transport.sendRoomPresence = sendRoomPresence;
             transport.room.onPeerJoin((peerId) => {
                 this.log("subscribe success", { channel, roomId, strategy: transport.name, peerId });
                 this.publishPresence(peerId, transport);
             });
-            transport.room.onPeerLeave((peerId) => this.log("disconnect", { channel, strategy: transport.name, peerId }));
+            transport.room.onPeerLeave((peerId) => this.handlePeerLeave(peerId, transport));
             getChat((payload, peerId) => this.handleIncomingChat(payload, peerId, transport));
+            getRoomPresence((presence, peerId) => this.handlePresence(presence, peerId, transport));
             this.log("subscribe success", { channel, roomId, strategy: transport.name });
         }
     }
@@ -286,6 +290,7 @@ class PictoP2PWebSocket {
             try { transport.room?.leave(); } catch {}
             transport.room = null;
             transport.sendChat = null;
+            transport.sendRoomPresence = null;
         }
         this.log("leaveRoom", { roomId: oldRoom, userId: this.userId });
         this.publishPresence();
@@ -319,10 +324,13 @@ class PictoP2PWebSocket {
     handlePeerLeave(peerId, transport) {
         const key = this.peerKey(transport, peerId);
         const peer = this.peers.get(key);
-        this.peers.delete(key);
         this.log("disconnect", { peerId, strategy: transport?.name, userId: peer?.userId });
-        if (peer?.room && peer.room === this.roomId && !this.hasUserInRoom(peer.userId, peer.room)) {
-            this.emit({ type: "sv_playerLeft", player: peer.player, id: peer.room });
+        if (peer) {
+            peer.seenAt = Date.now() - Math.floor(this.peerTtlMs / 2);
+            peer.reconnecting = true;
+            this.peers.set(key, peer);
+            this.setSyncStatus("RECONNECTING");
+            this.publishPresence();
         }
         this.emit({ type: "sv_roomIds", count: this.countRooms(), ids: this.rooms });
     }
@@ -376,6 +384,13 @@ class PictoP2PWebSocket {
             }).catch((error) => {
                 this.log("error", { message: "presence send failed", strategy: transport.name, error: error?.message });
             });
+            if (this.roomId && transport.sendRoomPresence) {
+                transport.sendRoomPresence(payload, peerId).then(() => {
+                    this.log("presence sent", { userId: this.userId, roomId: this.roomId, strategy: `${transport.name}:room`, peerId });
+                }).catch((error) => {
+                    this.log("error", { message: "room presence send failed", strategy: transport.name, error: error?.message });
+                });
+            }
         }
     }
 
@@ -414,6 +429,9 @@ class PictoP2PWebSocket {
             if (peer.seenAt && now - peer.seenAt > this.peerTtlMs) {
                 this.peers.delete(peerId);
                 changed = true;
+                if (peer?.room && peer.room === this.roomId && !this.hasUserInRoom(peer.userId, peer.room, peerId)) {
+                    this.emit({ type: "sv_playerLeft", player: peer.player, id: peer.room });
+                }
             }
         }
         if (changed) this.emit({ type: "sv_roomIds", count: this.countRooms(), ids: this.rooms });
@@ -556,6 +574,18 @@ function installPictoInputFocusPatch() {
     const focusInput = () => {
         const input = document.getElementById("topy");
         if (!input || !window.__pictoP2P?.roomId) return;
+        prepareNativeInput(input);
+        try {
+            input.focus({ preventScroll: true });
+        } catch {
+            input.focus();
+        }
+    };
+    window.__pictoFocusInput = focusInput;
+
+    const isMobileLike = () => matchMedia("(pointer: coarse)").matches || innerWidth <= 600;
+
+    const prepareNativeInput = (input) => {
         const canvas = document.querySelector("#root canvas");
         if (canvas) {
             input.style.display = "block";
@@ -572,13 +602,14 @@ function installPictoInputFocusPatch() {
             input.style.color = "transparent";
             input.style.caretColor = "transparent";
         }
-        try {
-            input.focus({ preventScroll: true });
-        } catch {
-            input.focus();
-        }
     };
-    window.__pictoFocusInput = focusInput;
+
+    const keepMobileKeyboardClosed = () => {
+        const input = document.getElementById("topy");
+        if (!input || !isMobileLike()) return;
+        prepareNativeInput(input);
+        if (document.activeElement === input) input.blur();
+    };
 
     const ensureKeyboardButton = () => {
         if (keyboardButton) return keyboardButton;
@@ -612,6 +643,7 @@ function installPictoInputFocusPatch() {
         });
         keyboardButton.addEventListener("click", (event) => {
             event.preventDefault();
+            event.stopPropagation();
             focusInput();
         });
         document.getElementById("root")?.appendChild(keyboardButton);
@@ -620,10 +652,12 @@ function installPictoInputFocusPatch() {
 
     const updateKeyboardButton = () => {
         const button = ensureKeyboardButton();
-        const mobileLike = matchMedia("(pointer: coarse)").matches || innerWidth <= 600;
+        const mobileLike = isMobileLike();
         const desktopLike = !mobileLike;
         if (window.__pictoP2P?.roomId && mobileLike) {
             button.style.display = "block";
+            const input = document.getElementById("topy");
+            if (input) prepareNativeInput(input);
         } else {
             button.style.display = "none";
         }
@@ -634,6 +668,10 @@ function installPictoInputFocusPatch() {
 
     window.addEventListener("resize", updateKeyboardButton);
     document.addEventListener("visibilitychange", updateKeyboardButton);
+    document.getElementById("root")?.addEventListener("pointerdown", (event) => {
+        if (event.target === keyboardButton) return;
+        keepMobileKeyboardClosed();
+    }, true);
     setInterval(updateKeyboardButton, 500);
     updateKeyboardButton();
 }
