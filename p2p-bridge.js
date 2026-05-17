@@ -572,14 +572,22 @@ function installPictoInputFocusPatch() {
     let keyboardButton = null;
     let allowMobileKeyboardFocus = false;
 
+    const setMobileKeyboardEnabled = (input, enabled) => {
+        if (!isMobileLike()) return;
+        input.disabled = !enabled;
+        input.readOnly = !enabled;
+        input.inputMode = enabled ? "text" : "none";
+        input.setAttribute("inputmode", enabled ? "text" : "none");
+    };
+
     const focusInput = () => {
         const input = document.getElementById("topy");
         if (!input || !window.__pictoP2P?.roomId) return;
-        prepareNativeInput(input);
         if (isMobileLike()) {
             allowMobileKeyboardFocus = true;
-            input.readOnly = false;
+            setMobileKeyboardEnabled(input, true);
         }
+        prepareNativeInput(input);
         try {
             input.focus({ preventScroll: true });
         } catch {
@@ -610,22 +618,24 @@ function installPictoInputFocusPatch() {
             input.style.color = "transparent";
             input.style.caretColor = "transparent";
         }
-        if (isMobileLike() && document.activeElement !== input) input.readOnly = true;
+        if (isMobileLike() && document.activeElement !== input && !allowMobileKeyboardFocus) {
+            setMobileKeyboardEnabled(input, false);
+        }
     };
 
     const keepMobileKeyboardClosed = () => {
         const input = document.getElementById("topy");
         if (!input || !isMobileLike()) return;
         prepareNativeInput(input);
-        input.readOnly = true;
         if (document.activeElement === input) input.blur();
+        setMobileKeyboardEnabled(input, false);
     };
 
     const guardUnexpectedMobileFocus = () => {
         const input = document.getElementById("topy");
         if (!input || !isMobileLike()) return;
         if (allowMobileKeyboardFocus) return;
-        input.readOnly = true;
+        setMobileKeyboardEnabled(input, false);
         setTimeout(() => {
             if (document.activeElement === input && !allowMobileKeyboardFocus) input.blur();
         }, 0);
@@ -694,6 +704,10 @@ function installPictoInputFocusPatch() {
         keepMobileKeyboardClosed();
     }, true);
     document.getElementById("root")?.addEventListener("touchstart", (event) => {
+        if (event.target === keyboardButton) return;
+        keepMobileKeyboardClosed();
+    }, true);
+    document.getElementById("root")?.addEventListener("touchmove", (event) => {
         if (event.target === keyboardButton) return;
         keepMobileKeyboardClosed();
     }, true);
