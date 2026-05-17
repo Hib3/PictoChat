@@ -570,16 +570,24 @@ window.PictoP2PWebSocket = PictoP2PWebSocket;
 
 function installPictoInputFocusPatch() {
     let keyboardButton = null;
+    let allowMobileKeyboardFocus = false;
 
     const focusInput = () => {
         const input = document.getElementById("topy");
         if (!input || !window.__pictoP2P?.roomId) return;
         prepareNativeInput(input);
+        if (isMobileLike()) {
+            allowMobileKeyboardFocus = true;
+            input.readOnly = false;
+        }
         try {
             input.focus({ preventScroll: true });
         } catch {
             input.focus();
         }
+        setTimeout(() => {
+            allowMobileKeyboardFocus = false;
+        }, 800);
     };
     window.__pictoFocusInput = focusInput;
 
@@ -602,13 +610,25 @@ function installPictoInputFocusPatch() {
             input.style.color = "transparent";
             input.style.caretColor = "transparent";
         }
+        if (isMobileLike() && document.activeElement !== input) input.readOnly = true;
     };
 
     const keepMobileKeyboardClosed = () => {
         const input = document.getElementById("topy");
         if (!input || !isMobileLike()) return;
         prepareNativeInput(input);
+        input.readOnly = true;
         if (document.activeElement === input) input.blur();
+    };
+
+    const guardUnexpectedMobileFocus = () => {
+        const input = document.getElementById("topy");
+        if (!input || !isMobileLike()) return;
+        if (allowMobileKeyboardFocus) return;
+        input.readOnly = true;
+        setTimeout(() => {
+            if (document.activeElement === input && !allowMobileKeyboardFocus) input.blur();
+        }, 0);
     };
 
     const ensureKeyboardButton = () => {
@@ -668,7 +688,12 @@ function installPictoInputFocusPatch() {
 
     window.addEventListener("resize", updateKeyboardButton);
     document.addEventListener("visibilitychange", updateKeyboardButton);
+    document.addEventListener("focusin", guardUnexpectedMobileFocus);
     document.getElementById("root")?.addEventListener("pointerdown", (event) => {
+        if (event.target === keyboardButton) return;
+        keepMobileKeyboardClosed();
+    }, true);
+    document.getElementById("root")?.addEventListener("touchstart", (event) => {
         if (event.target === keyboardButton) return;
         keepMobileKeyboardClosed();
     }, true);
