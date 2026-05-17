@@ -595,6 +595,7 @@ function installPictoInputFocusPatch() {
         }
         setTimeout(() => {
             allowMobileKeyboardFocus = false;
+            if (isMobileLike() && document.activeElement !== input) setMobileKeyboardEnabled(input, false);
         }, 800);
     };
     window.__pictoFocusInput = focusInput;
@@ -680,8 +681,18 @@ function installPictoInputFocusPatch() {
         return keyboardButton;
     };
 
+    const ensureInputBlurLock = () => {
+        const input = document.getElementById("topy");
+        if (!input || input.__pictoBlurLockInstalled) return;
+        input.__pictoBlurLockInstalled = true;
+        input.addEventListener("blur", () => {
+            if (isMobileLike()) setMobileKeyboardEnabled(input, false);
+        });
+    };
+
     const updateKeyboardButton = () => {
         const button = ensureKeyboardButton();
+        ensureInputBlurLock();
         const mobileLike = isMobileLike();
         const desktopLike = !mobileLike;
         if (window.__pictoP2P?.roomId && mobileLike) {
