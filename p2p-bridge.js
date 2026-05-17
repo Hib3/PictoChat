@@ -642,6 +642,15 @@ function installPictoInputFocusPatch() {
         }, 0);
     };
 
+    const isKeyboardButtonEvent = (event) => {
+        if (!keyboardButton) return false;
+        if (event.target === keyboardButton || keyboardButton.contains(event.target)) return true;
+        const point = event.touches?.[0] || event.changedTouches?.[0] || event;
+        if (typeof point.clientX !== "number" || typeof point.clientY !== "number") return false;
+        const rect = keyboardButton.getBoundingClientRect();
+        return point.clientX >= rect.left && point.clientX <= rect.right && point.clientY >= rect.top && point.clientY <= rect.bottom;
+    };
+
     const ensureKeyboardButton = () => {
         if (keyboardButton) return keyboardButton;
         keyboardButton = document.createElement("button");
@@ -717,15 +726,25 @@ function installPictoInputFocusPatch() {
     document.addEventListener("visibilitychange", updateKeyboardButton);
     document.addEventListener("focusin", guardUnexpectedMobileFocus);
     document.getElementById("root")?.addEventListener("pointerdown", (event) => {
-        if (event.target === keyboardButton) return;
+        if (isKeyboardButtonEvent(event)) {
+            event.preventDefault();
+            event.stopPropagation();
+            focusInput();
+            return;
+        }
         keepMobileKeyboardClosed();
     }, true);
     document.getElementById("root")?.addEventListener("touchstart", (event) => {
-        if (event.target === keyboardButton) return;
+        if (isKeyboardButtonEvent(event)) {
+            event.preventDefault();
+            event.stopPropagation();
+            focusInput();
+            return;
+        }
         keepMobileKeyboardClosed();
     }, true);
     document.getElementById("root")?.addEventListener("touchmove", (event) => {
-        if (event.target === keyboardButton) return;
+        if (isKeyboardButtonEvent(event)) return;
         keepMobileKeyboardClosed();
     }, true);
     setInterval(updateKeyboardButton, 500);
