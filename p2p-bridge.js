@@ -580,6 +580,25 @@ function installPictoInputFocusPatch() {
         input.setAttribute("inputmode", enabled ? "text" : "none");
     };
 
+    const lockMobileInput = (input) => {
+        if (!input || !isMobileLike()) return;
+        allowMobileKeyboardFocus = false;
+        if (document.activeElement === input) input.blur();
+        setMobileKeyboardEnabled(input, false);
+        input.style.position = "fixed";
+        input.style.left = "-10000px";
+        input.style.top = "-10000px";
+        input.style.width = "1px";
+        input.style.height = "1px";
+        input.style.pointerEvents = "none";
+        input.style.opacity = "0";
+        const root = document.getElementById("root");
+        if (root) {
+            root.setAttribute("tabindex", "-1");
+            try { root.focus({ preventScroll: true }); } catch {}
+        }
+    };
+
     const focusInput = () => {
         const input = document.getElementById("topy");
         if (!input || !window.__pictoP2P?.roomId) return;
@@ -599,6 +618,7 @@ function installPictoInputFocusPatch() {
         }, 800);
     };
     window.__pictoFocusInput = focusInput;
+    window.__pictoCanFocusInput = () => !isMobileLike() || allowMobileKeyboardFocus;
 
     const isMobileLike = () => matchMedia("(pointer: coarse)").matches || innerWidth <= 600;
 
@@ -606,6 +626,7 @@ function installPictoInputFocusPatch() {
         const canvas = document.querySelector("#root canvas");
         if (canvas) {
             input.style.display = "block";
+            input.style.position = "absolute";
             input.style.left = "0px";
             input.style.top = "0px";
             input.style.width = `${canvas.width}px`;
@@ -620,25 +641,23 @@ function installPictoInputFocusPatch() {
             input.style.caretColor = "transparent";
         }
         if (isMobileLike() && document.activeElement !== input && !allowMobileKeyboardFocus) {
-            setMobileKeyboardEnabled(input, false);
+            lockMobileInput(input);
         }
     };
 
     const keepMobileKeyboardClosed = () => {
         const input = document.getElementById("topy");
         if (!input || !isMobileLike()) return;
-        prepareNativeInput(input);
-        if (document.activeElement === input) input.blur();
-        setMobileKeyboardEnabled(input, false);
+        lockMobileInput(input);
     };
 
     const guardUnexpectedMobileFocus = () => {
         const input = document.getElementById("topy");
         if (!input || !isMobileLike()) return;
         if (allowMobileKeyboardFocus) return;
-        setMobileKeyboardEnabled(input, false);
+        lockMobileInput(input);
         setTimeout(() => {
-            if (document.activeElement === input && !allowMobileKeyboardFocus) input.blur();
+            if (!allowMobileKeyboardFocus) lockMobileInput(input);
         }, 0);
     };
 
@@ -713,7 +732,7 @@ function installPictoInputFocusPatch() {
         if (window.__pictoP2P?.roomId && mobileLike) {
             button.style.display = "block";
             const input = document.getElementById("topy");
-            if (input) prepareNativeInput(input);
+            if (input && document.activeElement !== input && !allowMobileKeyboardFocus) lockMobileInput(input);
         } else {
             button.style.display = "none";
         }
@@ -725,7 +744,7 @@ function installPictoInputFocusPatch() {
     window.addEventListener("resize", updateKeyboardButton);
     document.addEventListener("visibilitychange", updateKeyboardButton);
     document.addEventListener("focusin", guardUnexpectedMobileFocus);
-    document.getElementById("root")?.addEventListener("pointerdown", (event) => {
+    const handleMobileDrawTouch = (event) => {
         if (isKeyboardButtonEvent(event)) {
             event.preventDefault();
             event.stopPropagation();
@@ -733,17 +752,12 @@ function installPictoInputFocusPatch() {
             return;
         }
         keepMobileKeyboardClosed();
-    }, true);
-    document.getElementById("root")?.addEventListener("touchstart", (event) => {
-        if (isKeyboardButtonEvent(event)) {
-            event.preventDefault();
-            event.stopPropagation();
-            focusInput();
-            return;
-        }
-        keepMobileKeyboardClosed();
-    }, true);
-    document.getElementById("root")?.addEventListener("touchmove", (event) => {
+    };
+    document.addEventListener("pointerdown", handleMobileDrawTouch, true);
+    document.addEventListener("touchstart", handleMobileDrawTouch, true);
+    document.addEventListener("mousedown", handleMobileDrawTouch, true);
+    document.addEventListener("click", handleMobileDrawTouch, true);
+    document.addEventListener("touchmove", (event) => {
         if (isKeyboardButtonEvent(event)) return;
         keepMobileKeyboardClosed();
     }, true);

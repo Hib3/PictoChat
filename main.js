@@ -1753,7 +1753,7 @@ loaderFunc = (loader, resources) => {
     pc_sprites.box.interactive = true;
     pc_sprites.box.on("pointerdown", function () {
         inputFlag = true;
-        if (window.__pictoFocusInput) window.__pictoFocusInput();
+        if (window.__pictoFocusInput && (!window.__pictoCanFocusInput || window.__pictoCanFocusInput())) window.__pictoFocusInput();
     });
     pc_sprites.box.on("pointerup", function () {
         if (this.alpha === 1) {
