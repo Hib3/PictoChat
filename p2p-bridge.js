@@ -671,6 +671,12 @@ function installPictoInputFocusPatch() {
         keyboardButton.addEventListener("pointerdown", (event) => {
             event.preventDefault();
             event.stopPropagation();
+            focusInput();
+        });
+        keyboardButton.addEventListener("touchend", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            focusInput();
         });
         keyboardButton.addEventListener("click", (event) => {
             event.preventDefault();
