@@ -305,6 +305,8 @@
     } else {
         defaultColor = localStorage.getItem("color");
     }
+    var DESKTOP_SCALE_MULTIPLIER = 1.5;
+
     const pickr = Pickr.create({
         el: '.colorpicker',
         theme: 'nano',
@@ -433,15 +435,21 @@
         }, 1000 / 60);
     }
 
+    function isMobileLayout() {
+        return window.matchMedia("(pointer: coarse)").matches || window.innerWidth <= 600;
+    }
+
     function intScaling(set) {
         if (set)
             localStorage.setItem("intScaling", document.getElementById("int-scaling").checked);
         const height = (window.innerHeight - 2) / 384;
         const width = (window.innerWidth - 2) / 256;
-        SCALE = width > height ? height : width;
+        const baseScale = width > height ? height : width;
+        const scaleMultiplier = isMobileLayout() ? 1 : DESKTOP_SCALE_MULTIPLIER;
+        SCALE = baseScale * scaleMultiplier;
         scaleStage();
         if (localStorage.getItem("intScaling") === "true") {
-            SCALE = Math.floor(SCALE);
+            SCALE = Math.floor(baseScale) * scaleMultiplier;
             scaleStage();
         }
     }
